@@ -55,5 +55,6 @@
   "Enterprise account? Set the provider in the settings or check the log.": "Enterprise-Account? Stelle den Anbieter in den Einstellungen ein oder sieh ins Log.",
   "Access denied (403). Your organization may require SSO authorization or block this endpoint.": "Zugriff verweigert (403). Deine Organisation verlangt evtl. eine SSO-Freigabe oder blockiert diesen Endpunkt.",
   "Sign in": "Anmelden",
-  "Show log": "Log anzeigen"
+  "Show log": "Log anzeigen",
+  "Open dashboard": "Dashboard öffnen"
 }

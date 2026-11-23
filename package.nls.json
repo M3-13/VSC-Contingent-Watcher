@@ -35,5 +35,7 @@
   "cfg.authProvider.auto": "Detect automatically (recommended)",
   "cfg.authProvider.github": "github.com account (including Copilot Business/Enterprise seats on github.com)",
   "cfg.authProvider.enterprise": "GitHub Enterprise (GHE.com or GitHub Enterprise Server, uses `github-enterprise.uri`)",
-  "cfg.apiUrl": "Optional API base URL override, e.g. `https://api.acme.ghe.com`. Leave empty to derive it automatically."
+  "cfg.apiUrl": "Optional API base URL override, e.g. `https://api.acme.ghe.com`. Leave empty to derive it automatically.",
+  "view.container": "Copilot Contingent",
+  "view.dashboard": "Dashboard"
 }

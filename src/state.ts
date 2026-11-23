@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { compact } from './core/history';
 import { cycleKey } from './core/thresholds';
 import { HistoryPoint, QuotaSnapshot } from './core/types';
 
@@ -7,8 +8,6 @@ const K_LAST = 'lastSnapshot';
 const K_NOTIFIED = 'notified';
 const K_SNOOZE = 'snoozeUntil';
 const K_PACE_DAY = 'paceWarnedDay';
-
-const MAX_POINTS = 600;
 
 interface NotifiedState {
   cycle: string;
@@ -40,9 +39,7 @@ export class State {
     if (!lastPt || lastPt.used !== snap.used || snap.fetchedAt - lastPt.t > 3_600_000) {
       history.push({ t: snap.fetchedAt, used: snap.used });
     }
-    if (history.length > MAX_POINTS) {
-      history = history.slice(history.length - MAX_POINTS);
-    }
+    history = compact(history, snap.fetchedAt);
     await this.mem.update(K_HISTORY, history);
     await this.mem.update(K_LAST, snap);
   }
@@ -57,6 +54,15 @@ export class State {
     const prev = this.notifiedThresholds(resetDate);
     const merged = [...new Set([...prev, ...all.filter((t) => t <= threshold)])];
     await this.mem.update(K_NOTIFIED, { cycle: cycleKey(resetDate), thresholds: merged });
+  }
+
+  get snoozedUntil(): number | undefined {
+    const t = this.mem.get<number>(K_SNOOZE, 0);
+    return t > Date.now() ? t : undefined;
+  }
+
+  async unsnooze(): Promise<void> {
+    await this.mem.update(K_SNOOZE, 0);
   }
 
   get snoozed(): boolean {

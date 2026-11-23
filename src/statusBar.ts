@@ -135,7 +135,7 @@ export class StatusBar implements vscode.Disposable {
   private tooltip(snap: QuotaSnapshot, f: Forecast, cfg: Config, stale: boolean): vscode.MarkdownString {
     const unit = unitLabel(snap);
     const md = new vscode.MarkdownString(undefined, true);
-    md.isTrusted = { enabledCommands: ['contingentWatcher.refresh', 'contingentWatcher.showTips', 'contingentWatcher.openSettings'] };
+    md.isTrusted = { enabledCommands: ['contingentWatcher.showDetails', 'contingentWatcher.refresh', 'contingentWatcher.openSettings'] };
     md.supportThemeIcons = true;
 
     md.appendMarkdown(`**${vscode.l10n.t('Copilot Contingent')}** — ${statusLabel(f)}\n\n`);
@@ -169,8 +169,8 @@ export class StatusBar implements vscode.Disposable {
       md.appendMarkdown(`---\n\n$(lightbulb) ${vscode.l10n.t(tip.text)}\n\n`);
     }
     md.appendMarkdown(
-      `[$(refresh)](command:contingentWatcher.refresh "${vscode.l10n.t('Refresh')}") ` +
-        `[$(lightbulb)](command:contingentWatcher.showTips "${vscode.l10n.t('Tips')}") ` +
+      `[$(dashboard) ${vscode.l10n.t('Open dashboard')}](command:contingentWatcher.showDetails) · ` +
+        `[$(refresh)](command:contingentWatcher.refresh "${vscode.l10n.t('Refresh')}") ` +
         `[$(gear)](command:contingentWatcher.openSettings "${vscode.l10n.t('Settings')}")`,
     );
     return md;

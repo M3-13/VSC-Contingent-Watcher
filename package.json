@@ -33,23 +33,38 @@
     "icons": {
       "contingent-level-4": {
         "description": "Copilot Contingent: plenty left",
-        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E001" }
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E001"
+        }
       },
       "contingent-level-3": {
         "description": "Copilot Contingent: three quarters left",
-        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E002" }
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E002"
+        }
       },
       "contingent-level-2": {
         "description": "Copilot Contingent: half left",
-        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E003" }
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E003"
+        }
       },
       "contingent-level-1": {
         "description": "Copilot Contingent: running low",
-        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E004" }
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E004"
+        }
       },
       "contingent-level-0": {
         "description": "Copilot Contingent: empty or exhausted",
-        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E005" }
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E005"
+        }
       }
     },
     "commands": [
@@ -90,13 +105,50 @@
         "category": "Copilot Contingent"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "contingentWatcher",
+          "title": "%view.container%",
+          "icon": "media/activitybar.svg"
+        }
+      ]
+    },
+    "views": {
+      "contingentWatcher": [
+        {
+          "type": "webview",
+          "id": "contingentWatcher.dashboard",
+          "name": "%view.dashboard%",
+          "icon": "media/activitybar.svg",
+          "contextualTitle": "%view.container%"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "contingentWatcher.refresh",
+          "when": "view == contingentWatcher.dashboard",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "Copilot Contingent Watcher",
       "properties": {
         "contingentWatcher.auth.provider": {
           "type": "string",
-          "enum": ["auto", "github", "github-enterprise"],
-          "enumDescriptions": ["%cfg.authProvider.auto%", "%cfg.authProvider.github%", "%cfg.authProvider.enterprise%"],
+          "enum": [
+            "auto",
+            "github",
+            "github-enterprise"
+          ],
+          "enumDescriptions": [
+            "%cfg.authProvider.auto%",
+            "%cfg.authProvider.github%",
+            "%cfg.authProvider.enterprise%"
+          ],
           "default": "auto",
           "markdownDescription": "%cfg.authProvider%"
         },
