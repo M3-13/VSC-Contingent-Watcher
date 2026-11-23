@@ -4,7 +4,12 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 
 ## Was es macht
 
-- Zeigt verbleibendes Kontingent, Verbrauch, Prozent oder Tagesbudget in der Statusleiste.
+- Zeigt verbleibendes Kontingent, Verbrauch, Prozent oder Tagesbudget in der Statusleiste. Das Icon zeigt den Füllstand.
+- **Dashboard** (Klick auf die Statusleiste oder das Icon in der Activity Bar) mit diesen Kennzahlen:
+  - Heute, Tagesbudget, Tempo und Puffer gegenüber dem Plan
+  - Prognose zum Reset, Serie der Tage im Budget, letzte 7 Tage
+  - Tagesverlauf als Diagramm
+  - Spartipps, Schnell-Einstellungen und die Copilot-Schalter für Inline-Vorschläge und NES
 - Berechnet ein **Tagesbudget** bis zum Reset (optional ohne Wochenenden, mit Reserve).
 - Prognostiziert dein Tempo und zeigt, an welchem Tag das Kontingent bei gleichem Verbrauch leer wäre.
 - Warnt bei Schwellenwerten (z. B. 50/75/90/100 %) und bei zu hohem Tempo.

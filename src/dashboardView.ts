@@ -126,7 +126,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider, vscode
 <title>${vscode.l10n.t('Copilot Contingent')}</title>
 </head>
 <body>
-<main id="app" aria-live="polite" aria-busy="true"></main>
+<main id="app" aria-busy="true"></main>
 <script nonce="${nonce}" src="${js}"></script>
 </body>
 </html>`;
