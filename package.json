@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "publisher": "m3-13",
   "license": "MIT",
+  "icon": "media/icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/m3-13/vsc-contingent-watcher"
@@ -199,7 +200,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "tsc -p ./ --noEmit",
-    "test": "npm run compile && node --test out/test/",
+    "test": "npm run compile && node --test \"out/test/*.test.js\"",
     "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
