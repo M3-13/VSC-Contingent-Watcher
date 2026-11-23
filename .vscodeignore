@@ -1,0 +1,12 @@
+.vscode/**
+.github/**
+src/**
+out/test/**
+**/*.map
+**/*.ts
+tsconfig.json
+node_modules/**
+docs/**
+media/icon-source/**
+scripts/**
+media/dashboard/preview-*.png
