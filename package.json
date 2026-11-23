@@ -1,0 +1,212 @@
+{
+  "name": "copilot-contingent-watcher",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "0.1.0",
+  "publisher": "m3-13",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/m3-13/vsc-contingent-watcher"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other",
+    "AI"
+  ],
+  "keywords": [
+    "copilot",
+    "quota",
+    "premium requests",
+    "usage",
+    "budget"
+  ],
+  "l10n": "./l10n",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "contingentWatcher.refresh",
+        "title": "%cmd.refresh%",
+        "category": "Copilot Contingent",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "contingentWatcher.showDetails",
+        "title": "%cmd.showDetails%",
+        "category": "Copilot Contingent"
+      },
+      {
+        "command": "contingentWatcher.showTips",
+        "title": "%cmd.showTips%",
+        "category": "Copilot Contingent"
+      },
+      {
+        "command": "contingentWatcher.openSettings",
+        "title": "%cmd.openSettings%",
+        "category": "Copilot Contingent"
+      },
+      {
+        "command": "contingentWatcher.signIn",
+        "title": "%cmd.signIn%",
+        "category": "Copilot Contingent"
+      },
+      {
+        "command": "contingentWatcher.snooze",
+        "title": "%cmd.snooze%",
+        "category": "Copilot Contingent"
+      }
+    ],
+    "configuration": {
+      "title": "Copilot Contingent Watcher",
+      "properties": {
+        "contingentWatcher.refreshIntervalMinutes": {
+          "type": "number",
+          "default": 10,
+          "minimum": 2,
+          "maximum": 120,
+          "markdownDescription": "%cfg.refreshIntervalMinutes%"
+        },
+        "contingentWatcher.statusBar.display": {
+          "type": "string",
+          "enum": [
+            "remaining",
+            "used",
+            "percent",
+            "dailyBudget"
+          ],
+          "enumDescriptions": [
+            "%cfg.display.remaining%",
+            "%cfg.display.used%",
+            "%cfg.display.percent%",
+            "%cfg.display.dailyBudget%"
+          ],
+          "default": "remaining",
+          "markdownDescription": "%cfg.display%"
+        },
+        "contingentWatcher.statusBar.alignment": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right"
+          ],
+          "default": "right",
+          "markdownDescription": "%cfg.alignment%"
+        },
+        "contingentWatcher.warnings.thresholds": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "default": [
+            50,
+            75,
+            90,
+            100
+          ],
+          "markdownDescription": "%cfg.thresholds%"
+        },
+        "contingentWatcher.warnings.paceWarning": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%cfg.paceWarning%"
+        },
+        "contingentWatcher.warnings.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%cfg.warningsEnabled%"
+        },
+        "contingentWatcher.budget.countWeekends": {
+          "type": "boolean",
+          "default": false,
+          "markdownDescription": "%cfg.countWeekends%"
+        },
+        "contingentWatcher.budget.reserve": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "markdownDescription": "%cfg.reserve%"
+        },
+        "contingentWatcher.tips.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%cfg.tipsEnabled%"
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "contingentWatcher.gettingStarted",
+        "title": "%walk.title%",
+        "description": "%walk.description%",
+        "steps": [
+          {
+            "id": "signIn",
+            "title": "%walk.signIn.title%",
+            "description": "%walk.signIn.description%",
+            "media": {
+              "markdown": "media/walkthrough/signin.md"
+            },
+            "completionEvents": [
+              "onCommand:contingentWatcher.signIn"
+            ]
+          },
+          {
+            "id": "statusBar",
+            "title": "%walk.statusBar.title%",
+            "description": "%walk.statusBar.description%",
+            "media": {
+              "markdown": "media/walkthrough/statusbar.md"
+            },
+            "completionEvents": [
+              "onCommand:contingentWatcher.showDetails"
+            ]
+          },
+          {
+            "id": "saveRequests",
+            "title": "%walk.save.title%",
+            "description": "%walk.save.description%",
+            "media": {
+              "markdown": "media/walkthrough/best-practices.md"
+            },
+            "completionEvents": [
+              "onCommand:contingentWatcher.showTips"
+            ]
+          },
+          {
+            "id": "configure",
+            "title": "%walk.configure.title%",
+            "description": "%walk.configure.description%",
+            "media": {
+              "markdown": "media/walkthrough/configure.md"
+            },
+            "completionEvents": [
+              "onSettingChanged:contingentWatcher"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "tsc -p ./ --noEmit",
+    "test": "npm run compile && node --test out/test/",
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "^5.6.0"
+  }
+}
