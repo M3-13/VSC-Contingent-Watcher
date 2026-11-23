@@ -29,5 +29,11 @@
   "walk.save.title": "Make your quota last",
   "walk.save.description": "Practical habits that save requests without slowing you down.\n[Show saving tips](command:contingentWatcher.showTips)",
   "walk.configure.title": "Make it yours",
-  "walk.configure.description": "Choose the display mode, warning thresholds, weekends and a reserve.\n[Open settings](command:contingentWatcher.openSettings)"
+  "walk.configure.description": "Choose the display mode, warning thresholds, weekends and a reserve.\n[Open settings](command:contingentWatcher.openSettings)",
+  "cmd.showLog": "Show Log",
+  "cfg.authProvider": "Which sign-in to use. `auto` follows Copilot (`github.copilot.advanced.authProvider`) and `github-enterprise.uri` and falls back to the other provider.",
+  "cfg.authProvider.auto": "Detect automatically (recommended)",
+  "cfg.authProvider.github": "github.com account (including Copilot Business/Enterprise seats on github.com)",
+  "cfg.authProvider.enterprise": "GitHub Enterprise (GHE.com or GitHub Enterprise Server, uses `github-enterprise.uri`)",
+  "cfg.apiUrl": "Optional API base URL override, e.g. `https://api.acme.ghe.com`. Leave empty to derive it automatically."
 }

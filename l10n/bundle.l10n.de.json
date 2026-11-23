@@ -50,5 +50,10 @@
   "Start a new chat when the topic changes; long histories cost more and lower answer quality.": "Starte bei einem neuen Thema einen neuen Chat; lange Verläufe kosten mehr und verschlechtern die Antworten.",
   "Put recurring conventions in .github/copilot-instructions.md so you do not repeat them in every prompt.": "Lege wiederkehrende Konventionen in .github/copilot-instructions.md ab, damit du sie nicht in jedem Prompt wiederholst.",
   "Set a spending limit for overages in your GitHub billing settings so nothing gets expensive by surprise.": "Setze in deinen GitHub-Abrechnungseinstellungen ein Ausgabenlimit für Überschreitungen, damit es nicht unerwartet teuer wird.",
-  "Check the daily budget in the status bar: it tells you what you can spend today and still reach the end of the month.": "Schau aufs Tagesbudget in der Statusleiste: Es zeigt, was du heute ausgeben kannst und trotzdem bis Monatsende kommst."
+  "Check the daily budget in the status bar: it tells you what you can spend today and still reach the end of the month.": "Schau aufs Tagesbudget in der Statusleiste: Es zeigt, was du heute ausgeben kannst und trotzdem bis Monatsende kommst.",
+  "Sign in with GitHub Enterprise to see your Copilot quota": "Mit GitHub Enterprise anmelden, um dein Copilot-Kontingent zu sehen",
+  "Enterprise account? Set the provider in the settings or check the log.": "Enterprise-Account? Stelle den Anbieter in den Einstellungen ein oder sieh ins Log.",
+  "Access denied (403). Your organization may require SSO authorization or block this endpoint.": "Zugriff verweigert (403). Deine Organisation verlangt evtl. eine SSO-Freigabe oder blockiert diesen Endpunkt.",
+  "Sign in": "Anmelden",
+  "Show log": "Log anzeigen"
 }

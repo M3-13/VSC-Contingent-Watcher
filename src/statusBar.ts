@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { ProviderId } from './auth';
 import { Config } from './config';
 import { pickTip } from './core/tips';
 import { Forecast, QuotaSnapshot } from './core/types';
@@ -6,8 +7,8 @@ import { bar, fmt, fmtDate, statusLabel, unitLabel } from './format';
 
 export type ViewState =
   | { kind: 'loading' }
-  | { kind: 'signedOut' }
-  | { kind: 'noCopilot' }
+  | { kind: 'signedOut'; provider: ProviderId }
+  | { kind: 'noCopilot'; provider: ProviderId; status?: number }
   | { kind: 'error'; message: string; stale?: { snap: QuotaSnapshot; forecast: Forecast } }
   | { kind: 'ok'; snap: QuotaSnapshot; forecast: Forecast };
 
@@ -49,12 +50,22 @@ export class StatusBar implements vscode.Disposable {
         return;
       case 'signedOut':
         item.text = `${ICON} $(account)`;
-        item.tooltip = vscode.l10n.t('Sign in with GitHub to see your Copilot quota');
+        item.tooltip = this.hint(
+          state.provider === 'github-enterprise'
+            ? vscode.l10n.t('Sign in with GitHub Enterprise to see your Copilot quota')
+            : vscode.l10n.t('Sign in with GitHub to see your Copilot quota'),
+          vscode.l10n.t('Enterprise account? Set the provider in the settings or check the log.'),
+        );
         item.command = 'contingentWatcher.signIn';
         return;
       case 'noCopilot':
         item.text = `${ICON} —`;
-        item.tooltip = vscode.l10n.t('No metered Copilot quota found for this account');
+        item.tooltip = this.hint(
+          vscode.l10n.t('No metered Copilot quota found for this account'),
+          state.status === 403
+            ? vscode.l10n.t('Access denied (403). Your organization may require SSO authorization or block this endpoint.')
+            : vscode.l10n.t('Enterprise account? Set the provider in the settings or check the log.'),
+        );
         return;
       case 'error':
         if (state.stale) {
@@ -98,6 +109,18 @@ export class StatusBar implements vscode.Disposable {
       item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
     }
     item.tooltip = this.tooltip(snap, f, cfg, stale);
+  }
+
+  private hint(title: string, detail: string): vscode.MarkdownString {
+    const md = new vscode.MarkdownString(undefined, true);
+    md.isTrusted = { enabledCommands: ['contingentWatcher.signIn', 'contingentWatcher.showLog', 'contingentWatcher.openSettings'] };
+    md.appendMarkdown(`**${title}**\n\n${detail}\n\n`);
+    md.appendMarkdown(
+      `[$(account) ${vscode.l10n.t('Sign in')}](command:contingentWatcher.signIn) · ` +
+        `[$(output) ${vscode.l10n.t('Show log')}](command:contingentWatcher.showLog) · ` +
+        `[$(gear) ${vscode.l10n.t('Settings')}](command:contingentWatcher.openSettings)`,
+    );
+    return md;
   }
 
   private tooltip(snap: QuotaSnapshot, f: Forecast, cfg: Config, stale: boolean): vscode.MarkdownString {

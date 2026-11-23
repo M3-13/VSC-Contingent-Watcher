@@ -29,5 +29,11 @@
   "walk.save.title": "Kontingent strecken",
   "walk.save.description": "Praktische Gewohnheiten, die Anfragen sparen, ohne dich auszubremsen.\n[Spartipps anzeigen](command:contingentWatcher.showTips)",
   "walk.configure.title": "Passe es an",
-  "walk.configure.description": "Wähle Anzeigemodus, Schwellenwerte, Wochenenden und eine Reserve.\n[Einstellungen öffnen](command:contingentWatcher.openSettings)"
+  "walk.configure.description": "Wähle Anzeigemodus, Schwellenwerte, Wochenenden und eine Reserve.\n[Einstellungen öffnen](command:contingentWatcher.openSettings)",
+  "cmd.showLog": "Log anzeigen",
+  "cfg.authProvider": "Welche Anmeldung genutzt wird. `auto` folgt Copilot (`github.copilot.advanced.authProvider`) und `github-enterprise.uri` und weicht sonst auf den anderen Anbieter aus.",
+  "cfg.authProvider.auto": "Automatisch erkennen (empfohlen)",
+  "cfg.authProvider.github": "github.com-Account (auch Copilot Business/Enterprise auf github.com)",
+  "cfg.authProvider.enterprise": "GitHub Enterprise (GHE.com oder GitHub Enterprise Server, nutzt `github-enterprise.uri`)",
+  "cfg.apiUrl": "Optionale API-Basis-URL, z. B. `https://api.acme.ghe.com`. Leer lassen für automatische Erkennung."
 }

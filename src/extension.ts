@@ -13,13 +13,17 @@ const BILLING_URL = 'https://github.com/settings/billing';
 
 class Controller implements vscode.Disposable {
   private cfg: Config = readConfig();
-  private readonly service = new QuotaService();
+  private readonly service: QuotaService;
   private readonly bar: StatusBar;
   private timer: NodeJS.Timeout | undefined;
   private view: ViewState = { kind: 'loading' };
   private inFlight: Promise<void> | undefined;
 
-  constructor(private readonly state: State) {
+  constructor(
+    private readonly state: State,
+    log: vscode.LogOutputChannel,
+  ) {
+    this.service = new QuotaService(log);
     this.bar = new StatusBar(this.cfg);
     const last = state.last;
     if (last) {
@@ -88,8 +92,12 @@ class Controller implements vscode.Disposable {
         this.view = { kind: 'error', message: res.message, stale: last ? { snap: last, forecast: this.forecast(last) } : undefined };
         break;
       }
-      default:
-        this.view = res;
+      case 'signedOut':
+        this.view = { kind: 'signedOut', provider: res.target.provider };
+        break;
+      case 'noCopilot':
+        this.view = { kind: 'noCopilot', provider: res.target.provider, status: res.status };
+        break;
     }
     this.bar.render(this.view, this.cfg);
   }
@@ -121,6 +129,9 @@ class Controller implements vscode.Disposable {
       );
     } else if (this.view.kind === 'signedOut') {
       items.push({ label: `$(account) ${vscode.l10n.t('Sign in with GitHub')}`, run: () => this.refresh(true) });
+    }
+    if (this.view.kind !== 'ok') {
+      items.push({ label: `$(output) ${vscode.l10n.t('Show log')}`, run: () => vscode.commands.executeCommand('contingentWatcher.showLog') });
     }
     items.push(
       { label: `$(refresh) ${vscode.l10n.t('Refresh')}`, run: () => this.refresh() },
@@ -154,9 +165,12 @@ class Controller implements vscode.Disposable {
 
 export function activate(context: vscode.ExtensionContext): void {
   const state = new State(context.globalState);
-  const ctl = new Controller(state);
+  const log = vscode.window.createOutputChannel('Copilot Contingent', { log: true });
+  const ctl = new Controller(state, log);
   context.subscriptions.push(
     ctl,
+    log,
+    vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
     vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.refresh()),
     vscode.commands.registerCommand('contingentWatcher.signIn', () => ctl.refresh(true)),
     vscode.commands.registerCommand('contingentWatcher.showDetails', () => ctl.showDetails()),
@@ -170,7 +184,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidChangeConfiguration((e) => e.affectsConfiguration(SECTION) && ctl.onConfigChanged()),
     vscode.window.onDidChangeWindowState((s) => s.focused && ctl.onFocus()),
-    vscode.authentication.onDidChangeSessions((e) => e.provider.id === 'github' && void ctl.refresh()),
+    vscode.authentication.onDidChangeSessions((e) => e.provider.id.startsWith('github') && void ctl.refresh()),
   );
   ctl.start();
 }
