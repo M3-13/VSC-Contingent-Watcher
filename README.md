@@ -21,6 +21,8 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 
 | Einstellung | Standard | Beschreibung |
 | --- | --- | --- |
+| `contingentWatcher.auth.provider` | `auto` | Anmeldung: `auto`, `github` oder `github-enterprise` (GHE.com / Enterprise Server). |
+| `contingentWatcher.auth.apiUrl` | leer | Optionale API-Basis-URL, z. B. `https://api.firma.ghe.com`. |
 | `contingentWatcher.refreshIntervalMinutes` | `10` | Aktualisierungsintervall in Minuten (2 bis 120). |
 | `contingentWatcher.statusBar.display` | `remaining` | Anzeige: `remaining`, `used`, `percent` oder `dailyBudget`. |
 | `contingentWatcher.statusBar.alignment` | `right` | Seite der Statusleiste: `left` oder `right`. |
@@ -41,6 +43,13 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `Copilot Contingent: Einstellungen öffnen` | Öffnet die Einstellungen der Erweiterung. |
 | `Copilot Contingent: Mit GitHub anmelden` | Anmeldung anstoßen. |
 | `Copilot Contingent: Warnungen für 24 Stunden stummschalten` | Snooze. |
+
+## Enterprise-Accounts & Fehlersuche
+
+- **Copilot Business/Enterprise auf github.com:** Hier ist nichts einzustellen. Es wird der normale GitHub-Login genutzt.
+- **GHE.com (`firma.ghe.com`) oder GitHub Enterprise Server:** In VS Code `github-enterprise.uri` setzen, z. B. `https://firma.ghe.com`. Die Extension erkennt das automatisch und nutzt den Anbieter `github-enterprise`.
+- **403 / SSO:** Deine Organisation verlangt evtl. eine SAML-SSO-Freigabe für den VS-Code-Login, oder sie blockiert den Endpunkt.
+- **Log:** Über *Copilot Contingent: Log anzeigen* siehst du, welcher Anbieter und welche URL genutzt wurden und welchen HTTP-Status die Abfrage hatte. Tokens werden nie geloggt.
 
 ## Spartipps
 

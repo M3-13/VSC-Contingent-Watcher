@@ -12,7 +12,16 @@ export type ViewState =
   | { kind: 'error'; message: string; stale?: { snap: QuotaSnapshot; forecast: Forecast } }
   | { kind: 'ok'; snap: QuotaSnapshot; forecast: Forecast };
 
-const ICON = '$(copilot)';
+const ICON = '$(contingent-level-4)';
+
+/** Picks the gauge glyph (4 = full … 0 = empty) matching the remaining share. */
+export function levelIcon(snap: QuotaSnapshot): string {
+  if (snap.unlimited || snap.entitlement <= 0) {
+    return ICON;
+  }
+  const level = Math.max(0, Math.min(4, Math.ceil((snap.remaining / snap.entitlement) * 4)));
+  return `$(contingent-level-${level})`;
+}
 
 export class StatusBar implements vscode.Disposable {
   private item: vscode.StatusBarItem;
@@ -101,7 +110,7 @@ export class StatusBar implements vscode.Disposable {
       default:
         value = fmt(snap.remaining);
     }
-    item.text = `${ICON} ${value}${stale ? ' $(history)' : ''}`;
+    item.text = `${levelIcon(snap)} ${value}${stale ? ' $(history)' : ''}`;
 
     if (f.status === 'critical' || f.status === 'exhausted') {
       item.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');

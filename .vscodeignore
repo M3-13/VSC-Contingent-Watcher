@@ -7,3 +7,5 @@ out/test/**
 tsconfig.json
 node_modules/**
 docs/**
+media/icon-source/**
+scripts/**

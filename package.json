@@ -30,6 +30,28 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "icons": {
+      "contingent-level-4": {
+        "description": "Copilot Contingent: plenty left",
+        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E001" }
+      },
+      "contingent-level-3": {
+        "description": "Copilot Contingent: three quarters left",
+        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E002" }
+      },
+      "contingent-level-2": {
+        "description": "Copilot Contingent: half left",
+        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E003" }
+      },
+      "contingent-level-1": {
+        "description": "Copilot Contingent: running low",
+        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E004" }
+      },
+      "contingent-level-0": {
+        "description": "Copilot Contingent: empty or exhausted",
+        "default": { "fontPath": "media/contingent-icons.woff", "fontCharacter": "\\E005" }
+      }
+    },
     "commands": [
       {
         "command": "contingentWatcher.refresh",
@@ -61,11 +83,28 @@
         "command": "contingentWatcher.snooze",
         "title": "%cmd.snooze%",
         "category": "Copilot Contingent"
+      },
+      {
+        "command": "contingentWatcher.showLog",
+        "title": "%cmd.showLog%",
+        "category": "Copilot Contingent"
       }
     ],
     "configuration": {
       "title": "Copilot Contingent Watcher",
       "properties": {
+        "contingentWatcher.auth.provider": {
+          "type": "string",
+          "enum": ["auto", "github", "github-enterprise"],
+          "enumDescriptions": ["%cfg.authProvider.auto%", "%cfg.authProvider.github%", "%cfg.authProvider.enterprise%"],
+          "default": "auto",
+          "markdownDescription": "%cfg.authProvider%"
+        },
+        "contingentWatcher.auth.apiUrl": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "%cfg.apiUrl%"
+        },
         "contingentWatcher.refreshIntervalMinutes": {
           "type": "number",
           "default": 10,

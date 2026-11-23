@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f3170"/>
+      <stop offset="1" stop-color="#151633"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="64" cy="80" r="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8b7bff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#8b7bff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fuel" x1="17" y1="0" x2="111" y2="0" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2ff0c2"/>
+      <stop offset=".45" stop-color="#38b8ff"/>
+      <stop offset="1" stop-color="#b38cff"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset=".25" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#ffc247"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+  </defs>
+  <rect width="128" height="128" rx="28" fill="url(#bg)"/>
+  <rect x=".75" y=".75" width="126.5" height="126.5" rx="27.25" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="1.5"/>
+  <circle cx="64" cy="80" r="44" fill="url(#halo)"/>
+  <path d="M98.955,42.581A47 47 0 0 1 111,74L96,74A32 32 0 0 0 88.326,53.21Z" fill="#ffffff" fill-opacity=".14"/>
+  <path d="M17,74A47 47 0 0 1 29.045,42.581L39.674,53.21A32 32 0 0 0 32,74ZM32.581,39.045A47 47 0 0 1 61.5,27.067L61.5,42.098A32 32 0 0 0 43.21,49.674ZM66.5,27.067A47 47 0 0 1 95.419,39.045L84.79,49.674A32 32 0 0 0 66.5,42.098Z" fill="url(#fuel)" filter="url(#glow)" opacity=".6"/>
+  <path d="M17,74A47 47 0 0 1 29.045,42.581L39.674,53.21A32 32 0 0 0 32,74ZM32.581,39.045A47 47 0 0 1 61.5,27.067L61.5,42.098A32 32 0 0 0 43.21,49.674ZM66.5,27.067A47 47 0 0 1 95.419,39.045L84.79,49.674A32 32 0 0 0 66.5,42.098Z" fill="url(#fuel)"/>
+  <path d="M64 58Q66.86 77.14 82.5 80Q66.86 82.86 64 102Q61.14 82.86 45.5 80Q61.14 77.14 64 58Z" fill="#ffd66b" filter="url(#glow)" opacity=".8"/>
+  <path d="M64 58Q66.86 77.14 82.5 80Q66.86 82.86 64 102Q61.14 82.86 45.5 80Q61.14 77.14 64 58Z" fill="url(#spark)"/>
+  <path d="M102 92.5Q103.2 98.8 108 100Q103.2 101.2 102 107.5Q100.8 101.2 96 100Q100.8 98.8 102 92.5Z" fill="#ffffff" fill-opacity=".85"/>
+</svg>
