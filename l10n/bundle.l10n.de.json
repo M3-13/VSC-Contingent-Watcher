@@ -315,5 +315,18 @@
   "Allowance empty": "Kontingent leer",
   "allowance empty": "Kontingent leer",
   "Need ~{0}": "Bedarf ~{0}",
-  "Estimated need for this month at its pace": "Geschätzter Bedarf dieses Monats bei seinem Tempo"
+  "Estimated need for this month at its pace": "Geschätzter Bedarf dieses Monats bei seinem Tempo",
+  "Answered by a free included model, so it uses none of your allowance.": "Antwortet mit einem kostenlosen inklusiven Modell und verbraucht daher nichts von deinem Kontingent.",
+  "While you work, the active editor time and the allowance used are recorded per git branch. The data stays on this machine.": "Während du arbeitest, werden aktive Editorzeit und verbrauchtes Kontingent pro Git-Branch aufgezeichnet. Die Daten bleiben auf diesem Rechner.",
+  "Turn it on to see what you worked on, how long it took and how much of your allowance it used.": "Schalte sie ein, um zu sehen, woran du gearbeitet hast, wie lange es gedauert hat und wie viel Kontingent es verbraucht hat.",
+  "Usage beyond your allowance is billed. Set a spending limit to stay in control.": "Verbrauch über dein Kontingent hinaus wird abgerechnet. Setze ein Ausgabenlimit, um die Kosten im Griff zu behalten.",
+  "Show": "Anzeigen",
+  "Auto prefers AI credits when GitHub reports them": "Auto bevorzugt AI Credits, wenn GitHub sie meldet",
+  "Credits": "Credits",
+  "Requests": "Anfragen",
+  "{0} credits": "{0} Credits",
+  "Type your side question after `@btw`, e.g. `@btw what does this regex match?`": "Schreib deine Nebenfrage hinter `@btw`, z. B. `@btw was matcht dieser Regex?`",
+  "Reading your chat and editor…": "Lese deinen Chat und Editor…",
+  "side question": "Nebenfrage",
+  "{0} requests": "{0} Anfragen"
 }

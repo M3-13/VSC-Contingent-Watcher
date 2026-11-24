@@ -2,6 +2,12 @@
 
 ## 0.2.0
 
+- `@btw` im Copilot-Chat: Nebenfragen mit dem gewählten Chat-Modell und Chat-Kontext
+- AI-Credits werden bevorzugt angezeigt (einstellbar), Verbrauch pro Modell in Credits
+- Bedarf (geschätzt): was der Monat bei deinem Tempo gebraucht hätte
+- Streak endet, wenn das Kontingent leer ist
+- Geführte Anmeldung für GitHub Enterprise (GHE.com, Enterprise Server)
+
 - btw: Nebenfragen mit Chat- und Editor-Kontext im eigenen Panel (Strg+Alt+Umschalt+B), mit Chat-Modell oder Gratis-Modell
 - Copilot-Optionen im Dashboard: Eagerness, Vorschläge pro Sprache, Snooze
 - Eigene Statusleisten-Farbe bleibt auch bei Warnungen sichtbar

@@ -52,7 +52,7 @@
   "cfg.preferredModels": "Kostenlose (inklusive, 0x) Modellfamilien, die btw im Modus *Kostenloses Modell* nutzen darf, in Reihenfolge (Präfix-Treffer). Ist keine verfügbar, antwortet btw nicht, statt auf ein Premium-Modell auszuweichen.",
   "view.btwContainer": "BTW",
   "view.btw": "Nebenfragen",
-  "cmd.btw": "Nebenfrage stellen (btw)",
+  "cmd.btw": "Nebenfrage im Chat stellen (@btw)",
   "cmd.btwClear": "Nebenfragen leeren",
   "cfg.btwIncludeChat": "Nutze einen Schnappschuss deines letzten Copilot-Chats (aus dem lokalen Chat-Speicher von VS Code) als Kontext für btw-Nebenfragen. Wenn aus, wird nur der Editor verwendet.",
   "cfg.btwModel": "Welches Modell btw-Nebenfragen beantwortet.",
@@ -61,5 +61,7 @@
   "cfg.unit": "Welches Kontingent angezeigt wird, wenn GitHub mehrere meldet.",
   "cfg.unit.auto": "Credits, wenn vorhanden (nutzungsbasierte Abrechnung), sonst Premium-Requests",
   "cfg.unit.credits": "Immer AI-Credits bevorzugen",
-  "cfg.unit.requests": "Immer Premium-Requests bevorzugen"
+  "cfg.unit.requests": "Immer Premium-Requests bevorzugen",
+  "chat.btw.description": "Stell eine kurze Nebenfrage mit dem Kontext deines Chats",
+  "cmd.btwPanel": "Nebenfrage im Panel stellen (geht auch, während ein Agent läuft)"
 }

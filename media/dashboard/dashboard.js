@@ -347,9 +347,9 @@
         icon: icon.sun,
         label: t('today'),
         value: fmt(m.today),
-        sub: q.unlimited || !f ? '' : t('ofBudget', fmt(budget)),
+        sub: q.unlimited || !f ? '' : !(q.remaining > 0) ? t('legendEmpty') : t('ofBudget', fmt(budget)),
         bar: q.unlimited || !f || budget <= 0 ? undefined : m.today / budget,
-        tone: !q.unlimited && f && m.today > budget ? 'bad' : !q.unlimited && f ? 'good' : '',
+        tone: q.unlimited || !f || !(q.remaining > 0) ? '' : m.today > budget ? 'bad' : 'good',
       }),
     );
     if (!q.unlimited && f) {
@@ -710,23 +710,30 @@
             c.activeDays > 0 ? raw('avgActiveDay', fmt(c.avgPerActiveDay)) : '',
           ]
             .filter(Boolean)
-            .map(esc)
-            .join(' · ');
+            .map(esc);
+          if (c.demand !== undefined && c.demand > c.entitlement) {
+            // The insight: how much more this month would have needed.
+            facts.unshift(`<span class="rev-need" title="${t('reviewNeedTitle')}">${t('reviewNeed', fmt(Math.round(c.demand)))}</span>`);
+          }
           return `<li class="rev ${c.current ? 'current' : ''} ${over ? 'over' : ''}">
             <div class="rev-head"><span class="rev-label">${esc(c.label)}${
               c.current ? ` <span class="badge badge-live">${t('running')}</span>` : ''
-            }</span><span class="rev-val"><b>${fmt(c.used)}</b><span class="muted"> / ${fmt(c.entitlement)}</span>${
-              c.demand !== undefined && c.demand > c.entitlement
-                ? `<span class="rev-need" title="${t('reviewNeedTitle')}"> · ${t('reviewNeed', fmt(Math.round(c.demand)))}</span>`
-                : ''
-            }</span></div>
+            }</span><span class="rev-val"><b>${fmt(c.used)}</b><span class="muted"> / ${fmt(c.entitlement)}</span></span></div>
             <div class="meter rev-meter"><span class="meter-fill" data-w="${clamp(share * 100, 0, 100)}"></span></div>
-            ${facts ? `<div class="rev-facts">${facts}</div>` : ''}</li>`;
+            ${facts.length ? `<div class="rev-facts">${facts.join(' · ')}</div>` : ''}</li>`;
         })
         .join('')}</ul>`;
     }
     return `<section class="card" aria-labelledby="rev-title">
       <div class="card-head"><h2 id="rev-title">${icon.calendar}${t('review')}</h2></div>${body}</section>`;
+  }
+
+  /** Credits when the report has them (share is by credits then), else request counts. */
+  function modelAmount(x, long) {
+    if (model.models.showCredits && x.credits !== undefined) {
+      return raw('creditsAmount', fmt(x.credits));
+    }
+    return long ? raw('requestsAmount', fmt(x.quantity)) : fmt(x.quantity);
   }
 
   function modelsCard() {
@@ -751,8 +758,8 @@
           ? `<p class="muted small">${t('modelsEmpty')}</p>`
           : `<ul class="mod-list">${items
               .map(
-                (x, i) => `<li class="mod ${i === 0 ? 'top' : ''}" title="${esc(`${x.model}: ${fmt(x.quantity)} ${unit()}`)}">
-            <div class="mod-head"><span class="mod-name">${esc(x.model)}</span><span class="mod-val"><span class="muted">${fmt(x.quantity)}</span> <b>${pct(
+                (x, i) => `<li class="mod ${i === 0 ? 'top' : ''}" title="${esc(`${x.model}: ${modelAmount(x, true)}`)}">
+            <div class="mod-head"><span class="mod-name">${esc(x.model)}</span><span class="mod-val"><span class="muted">${esc(modelAmount(x, false))}</span> <b>${pct(
               x.share * 100,
             )}</b></span></div>
             <div class="meter mod-meter"><span class="meter-fill" data-w="${clamp(x.share * 100, 0, 100)}"></span></div></li>`,
@@ -937,7 +944,13 @@
     const display = group(
       icon.monitor,
       t('displayGroup'),
-      `<div class="field"><span class="field-label" id="lbl-display">${t('statusBarShows')}</span>${segmented(
+      `<div class="field"><span class="field-label" id="lbl-unit">${t('unitShow')}</span>${segmented(
+        'unit',
+        s.unit || 'auto',
+        ['auto', 'credits', 'requests'].map((v) => [v, t(`unit_${v}`)]),
+        'lbl-unit',
+      )}<span class="row-hint">${t('unitHint')}</span></div>
+      <div class="field"><span class="field-label" id="lbl-display">${t('statusBarShows')}</span>${segmented(
         'display',
         s.display,
         [

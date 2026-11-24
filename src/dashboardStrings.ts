@@ -40,7 +40,7 @@ export function dashboardStrings(): Record<string, string> {
     btwTitle: vscode.l10n.t('Side questions with btw'),
     btwText: vscode.l10n.t("Type @btw in Copilot Chat for a quick side question. It knows your chat and editor, and isn't mixed into your main task."),
     btwModelInfoChat: vscode.l10n.t('Answered by the same model as your chat, so it costs what that model costs.'),
-    btwModelInfoFree: vscode.l10n.t('Answered by a free included model, so it uses no premium requests.'),
+    btwModelInfoFree: vscode.l10n.t('Answered by a free included model, so it uses none of your allowance.'),
 
     // History: activity
     activity: vscode.l10n.t('Activity'),
@@ -50,9 +50,9 @@ export function dashboardStrings(): Record<string, string> {
     durH: vscode.l10n.t('{0} h'),
     durHM: vscode.l10n.t('{0} h {1} min'),
     activityEmpty: vscode.l10n.t('Nothing recorded yet'),
-    activityEmptyText: vscode.l10n.t('While you work, the active editor time and the requests used are recorded per git branch. The data stays on this machine.'),
+    activityEmptyText: vscode.l10n.t('While you work, the active editor time and the allowance used are recorded per git branch. The data stays on this machine.'),
     activityOffTitle: vscode.l10n.t('Activity tracking is off'),
-    activityOffText: vscode.l10n.t('Turn it on to see what you worked on, how long it took and how many requests it used.'),
+    activityOffText: vscode.l10n.t('Turn it on to see what you worked on, how long it took and how much of your allowance it used.'),
     activityPaused: vscode.l10n.t('Tracking is paused.'),
     turnOn: vscode.l10n.t('Turn on'),
 
@@ -73,6 +73,8 @@ export function dashboardStrings(): Record<string, string> {
     removeToken: vscode.l10n.t('Remove token'),
     modelsLoading: vscode.l10n.t('Loading usage per model…'),
     modelsError: vscode.l10n.t('Could not load usage per model'),
+    creditsAmount: vscode.l10n.t('{0} credits'),
+    requestsAmount: vscode.l10n.t('{0} requests'),
     modelsEmpty: vscode.l10n.t('No usage recorded for this period yet.'),
 
     // Tiles
@@ -118,7 +120,7 @@ export function dashboardStrings(): Record<string, string> {
 
     // Overage
     overage: vscode.l10n.t('Overage'),
-    overageEnabled: vscode.l10n.t('Requests beyond your allowance are billed. Set a spending limit to stay in control.'),
+    overageEnabled: vscode.l10n.t('Usage beyond your allowance is billed. Set a spending limit to stay in control.'),
     overageCount: vscode.l10n.t('Overage this month: {0}'),
     openBilling: vscode.l10n.t('Open GitHub billing'),
 
@@ -159,6 +161,11 @@ export function dashboardStrings(): Record<string, string> {
     billingTokenHint: vscode.l10n.t("GitHub token with 'Plan' read permission"),
     tokenStored: vscode.l10n.t('Token stored securely'),
     statusBarShows: vscode.l10n.t('Status bar shows'),
+    unitShow: vscode.l10n.t('Show'),
+    unitHint: vscode.l10n.t('Auto prefers AI credits when GitHub reports them'),
+    unit_auto: vscode.l10n.t('Auto'),
+    unit_credits: vscode.l10n.t('Credits'),
+    unit_requests: vscode.l10n.t('Requests'),
     displayRemaining: vscode.l10n.t('Remaining'),
     displayUsed: vscode.l10n.t('Used'),
     displayPercent: vscode.l10n.t('Percent'),

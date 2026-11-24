@@ -224,6 +224,20 @@
         "title": "%cmd.btwClear%",
         "category": "Copilot Contingent",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "contingentWatcher.btw.panel",
+        "title": "%cmd.btwPanel%",
+        "category": "Copilot Contingent"
+      }
+    ],
+    "chatParticipants": [
+      {
+        "id": "contingentWatcher.btw",
+        "name": "btw",
+        "fullName": "btw",
+        "description": "%chat.btw.description%",
+        "isSticky": false
       }
     ],
     "viewsContainers": {

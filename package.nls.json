@@ -52,7 +52,7 @@
   "cfg.preferredModels": "Free (included, 0x) model families btw may use in *Free model* mode, in order of preference (prefix match). If none is available, btw does not answer rather than falling back to a premium model.",
   "view.btwContainer": "BTW",
   "view.btw": "Side questions",
-  "cmd.btw": "Ask a Side Question (btw)",
+  "cmd.btw": "Ask a Side Question in Chat (@btw)",
   "cmd.btwClear": "Clear Side Questions",
   "cfg.btwIncludeChat": "Use a snapshot of your most recent Copilot chat (read from VS Code's local chat storage) as context for btw side questions. When off, only the editor is used.",
   "cfg.btwModel": "Which model answers btw side questions.",
@@ -61,5 +61,7 @@
   "cfg.unit": "Which quota to show if GitHub reports several.",
   "cfg.unit.auto": "Credits if available (usage-based billing), otherwise premium requests",
   "cfg.unit.credits": "Always prefer AI credits",
-  "cfg.unit.requests": "Always prefer premium requests"
+  "cfg.unit.requests": "Always prefer premium requests",
+  "chat.btw.description": "Ask a quick side question with your chat's context",
+  "cmd.btwPanel": "Ask a Side Question in the Panel (works while an agent is busy)"
 }

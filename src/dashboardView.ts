@@ -57,6 +57,7 @@ const SETTINGS: Record<DashboardSettingKey, true> = {
   btwIncludeChat: true,
   copilotEagerness: true,
   copilotLanguage: true,
+  unit: true,
 };
 
 const has = (o: object, k: unknown): boolean => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
