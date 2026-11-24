@@ -528,19 +528,10 @@
         ${tip.relevant ? `<span class="badge badge-accent">${icon.spark}${t('relevantNow')}</span>` : ''}
         <p class="tip-text"><span class="sr-only">${t('tipCounter', i + 1, tips.length)}: </span>${esc(tip.text)}</p>
       </div>
-      <div class="tip-foot"><button class="link" data-cmd="openWalkthrough" data-k="guide">${icon.book}${t('openGuide')}</button></div>
     </section>`;
   }
 
-  function collapsible(id, title, iconSvg, body, extra = '') {
-    const open = !!ui.open[id];
-    return `<section class="card collapsible ${open ? 'open' : ''}">
-      <h2 class="disc-h"><button class="disclosure" data-action="toggle" data-section="${id}" data-k="disc-${id}" aria-expanded="${open}" aria-controls="sec-${id}">
-        ${iconSvg}<span class="disc-title">${title}</span>${extra}${icon.chevron}</button></h2>
-      <div class="disc-body" id="sec-${id}" ${open ? '' : 'hidden'}>${body}</div></section>`;
-  }
-
-  function allTips() {
+  function allTipsCard() {
     const tips = orderedTips();
     if (tips.length === 0) {
       return '';
@@ -554,11 +545,171 @@
         }</span></li>`,
       )
       .join('');
-    const count = `<span class="count">${tips.length}</span>`;
-    const body = `<ul class="tip-list">${items}</ul>
-      <div class="tip-foot"><button class="link" data-cmd="openWalkthrough" data-k="guide2">${icon.book}${t('openGuide')}</button></div>`;
-    return collapsible('allTips', t(model.settings.tipsEnabled ? 'allTips' : 'tips'), icon.bulb, body, count);
+    return `<section class="card" aria-labelledby="all-tips-title">
+      <div class="card-head"><h2 id="all-tips-title">${icon.bulb}${t(model.settings.tipsEnabled ? 'allTips' : 'tips')}</h2><span class="count">${tips.length}</span></div>
+      <ul class="tip-list">${items}</ul>
+      <div class="tip-foot"><button class="link" data-cmd="openWalkthrough" data-k="guide2">${icon.book}${t('openGuide')}</button></div></section>`;
   }
+
+  /** "/btw" etc. rendered as code inside an otherwise escaped sentence. */
+  function withCode(id, code) {
+    return t(id, '\u0000').replace('\u0000', `<code>${esc(code)}</code>`);
+  }
+
+  function sparsamCard() {
+    return `<section class="card sparsam-card" aria-labelledby="sparsam-title">
+      <div class="card-head"><h2 id="sparsam-title">${icon.chat}${t('sparsamTitle')}</h2><span class="badge badge-good">0×</span></div>
+      <p class="sparsam-text">${t('sparsamText')}</p>
+      <p class="sparsam-text muted">${withCode('sparsamBtw', '/btw')}</p>
+      <button class="btn primary" data-cmd="askSparsam" data-k="sparsam-ask">${icon.chat}${t('askSparsam')}</button></section>`;
+  }
+
+  /** Slim pointer to @sparsam on the overview. */
+  function sparsamStrip() {
+    return `<button class="strip" data-cmd="askSparsam" data-k="strip-ask"><span class="strip-icon">${icon.chat}</span>
+      <span class="strip-text"><strong>${t('askSparsam')}</strong><span>${t('sparsamStrip')}</span></span>${icon.chevron}</button>`;
+  }
+
+  function surplusBanner() {
+    const s = model.surplus;
+    if (!s || !s.message) {
+      return '';
+    }
+    return `<div class="surplus" role="status">
+      <span class="surplus-icon">${icon.gift}</span>
+      <div class="surplus-text"><strong>${esc(s.message)}</strong><span>${t('surplusBannerHint')}</span></div></div>`;
+  }
+
+  // ---------------------------------------------------------------- history
+
+  function duration(min) {
+    const m = Math.max(0, Math.round(min));
+    if (m < 60) {
+      return raw('durM', fmt(Math.max(1, m)));
+    }
+    const h = Math.floor(m / 60);
+    const r = m % 60;
+    return r ? raw('durHM', fmt(h), fmt(r)) : raw('durH', fmt(h));
+  }
+
+  function dateRange(start, end) {
+    const opts = { day: 'numeric', month: 'short' };
+    const a = new Date(start);
+    const b = new Date(end);
+    if (startOfDay(a).getTime() === startOfDay(b).getTime()) {
+      return fmtDate(a, opts);
+    }
+    const f = safe(() => new Intl.DateTimeFormat(loc(), opts));
+    // @ts-ignore formatRange is available in current Chromium.
+    const r = f && typeof f.formatRange === 'function' ? safe(() => f.formatRange(a, b)) : undefined;
+    return r || `${fmtDate(a, opts)} – ${fmtDate(b, opts)}`;
+  }
+
+  function unit() {
+    return (model.quota && model.quota.unitLabel) || '';
+  }
+
+  function activityCard() {
+    const a = model.activity || { enabled: false, items: [] };
+    const items = a.items || [];
+    const clear =
+      items.length > 0 ? `<button class="link subtle" data-cmd="clearActivity" data-k="act-clear">${icon.trash}${t('clear')}</button>` : '';
+    let body;
+    if (!a.enabled && items.length === 0) {
+      body = `<div class="empty-inline"><p><strong>${t('activityOffTitle')}</strong></p><p class="muted">${t('activityOffText')}</p>
+        <button class="btn primary small" data-action="enableActivity" data-k="act-on">${t('turnOn')}</button></div>`;
+    } else if (items.length === 0) {
+      body = `<div class="empty-inline"><p><strong>${t('activityEmpty')}</strong></p><p class="muted">${t('activityEmptyText')}</p></div>`;
+    } else {
+      const multiRepo = new Set(items.map((x) => x.repo)).size > 1;
+      body = `<ul class="act-list">${items
+        .map(
+          (x) => `<li class="act ${x.active ? 'is-active' : ''}">
+          <div class="act-main">
+            <div class="act-title"><span class="act-name" title="${esc(x.title)}">${esc(x.title)}</span>${
+              x.active ? `<span class="badge badge-live"><span class="live-dot"></span>${t('activeNow')}</span>` : ''
+            }</div>
+            ${x.detail ? `<div class="act-detail" title="${esc(x.detail)}">${esc(x.detail)}</div>` : ''}
+            <div class="act-date">${multiRepo ? `${esc(x.repo)} · ` : ''}${esc(dateRange(x.start, x.end))}</div>
+          </div>
+          <div class="act-nums"><span class="act-time">${esc(duration(x.activeMinutes))}</span><span class="act-used">${esc(fmt(x.used))} ${esc(unit())}</span></div>
+        </li>`,
+        )
+        .join('')}</ul>`;
+      if (!a.enabled) {
+        body += `<div class="act-off muted">${t('activityPaused')} <button class="link" data-action="enableActivity" data-k="act-on2">${t('turnOn')}</button></div>`;
+      }
+    }
+    return `<section class="card" aria-labelledby="act-title">
+      <div class="card-head"><h2 id="act-title">${icon.branch}${t('activity')}</h2>${clear}</div>${body}</section>`;
+  }
+
+  function reviewCard() {
+    const cycles = (model.review && model.review.cycles) || [];
+    let body;
+    if (cycles.length === 0) {
+      body = `<p class="muted small">${t('reviewEmpty')}</p>`;
+    } else {
+      body = `<ul class="rev-list">${cycles
+        .map((c) => {
+          const share = c.entitlement > 0 ? c.used / c.entitlement : 0;
+          const over = share > 1;
+          const facts = [
+            c.peakDay ? raw('peakDay', fmt(c.peakDay.used), fmtDate(parseDay(c.peakDay.date))) : '',
+            c.activeDays > 0 ? raw('avgActiveDay', fmt(c.avgPerActiveDay)) : '',
+          ]
+            .filter(Boolean)
+            .map(esc)
+            .join(' · ');
+          return `<li class="rev ${c.current ? 'current' : ''} ${over ? 'over' : ''}">
+            <div class="rev-head"><span class="rev-label">${esc(c.label)}${
+              c.current ? ` <span class="badge badge-live">${t('running')}</span>` : ''
+            }</span><span class="rev-val"><b>${fmt(c.used)}</b><span class="muted"> / ${fmt(c.entitlement)}</span></span></div>
+            <div class="meter rev-meter"><span class="meter-fill" data-w="${clamp(share * 100, 0, 100)}"></span></div>
+            ${facts ? `<div class="rev-facts">${facts}</div>` : ''}</li>`;
+        })
+        .join('')}</ul>`;
+    }
+    return `<section class="card" aria-labelledby="rev-title">
+      <div class="card-head"><h2 id="rev-title">${icon.calendar}${t('review')}</h2></div>${body}</section>`;
+  }
+
+  function modelsCard() {
+    const m = model.models || { state: 'notConfigured', items: [] };
+    let body;
+    let side = '';
+    if (m.state === 'notConfigured') {
+      body = `<div class="empty-inline"><p class="muted">${t('modelsNeedToken')}</p>
+        <button class="btn primary small" data-cmd="configureBillingToken" data-k="tok-add">${icon.key}${t('addToken')}</button></div>`;
+    } else if (m.state === 'loading') {
+      body = `<div class="sk-rows" aria-hidden="true"><span class="sk-line w80"></span><span class="sk-line w60"></span><span class="sk-line w40"></span></div>
+        <p class="sr-only" role="status">${t('modelsLoading')}</p>`;
+    } else if (m.state === 'error') {
+      body = `<div class="empty-inline"><p><strong>${t('modelsError')}</strong></p>${m.errorMessage ? `<p class="err-msg">${esc(m.errorMessage)}</p>` : ''}
+        <div class="btn-row"><button class="btn secondary small" data-cmd="refresh" data-k="mod-retry">${icon.refresh}${t('retry')}</button>
+        <button class="btn secondary small" data-cmd="configureBillingToken" data-k="mod-conf">${icon.key}${t('configureToken')}</button></div></div>`;
+    } else {
+      const items = m.items || [];
+      side = m.periodLabel ? `<span class="card-sub">${esc(m.periodLabel)}</span>` : '';
+      body =
+        items.length === 0
+          ? `<p class="muted small">${t('modelsEmpty')}</p>`
+          : `<ul class="mod-list">${items
+              .map(
+                (x, i) => `<li class="mod ${i === 0 ? 'top' : ''}" title="${esc(`${x.model}: ${fmt(x.quantity)} ${unit()}`)}">
+            <div class="mod-head"><span class="mod-name">${esc(x.model)}</span><span class="mod-val"><span class="muted">${fmt(x.quantity)}</span> <b>${pct(
+              x.share * 100,
+            )}</b></span></div>
+            <div class="meter mod-meter"><span class="meter-fill" data-w="${clamp(x.share * 100, 0, 100)}"></span></div></li>`,
+              )
+              .join('')}</ul>`;
+      body += `<div class="card-foot"><button class="link subtle" data-cmd="clearBillingToken" data-k="tok-rm">${t('removeToken')}</button></div>`;
+    }
+    return `<section class="card" aria-labelledby="mod-title">
+      <div class="card-head"><h2 id="mod-title">${icon.cpu}${t('perModel')}</h2>${side}</div>${body}</section>`;
+  }
+
+  // ---------------------------------------------------------------- settings controls
 
   function sw(key, on, labelId, disabled = false) {
     return `<button class="switch" role="switch" aria-checked="${!!on}" aria-labelledby="${labelId}" data-set="${key}" data-k="sw-${key}" ${
@@ -573,14 +724,16 @@
     }</div>${sw(key, on, id)}</div>`;
   }
 
-  function segmented(key, value, options, labelId) {
-    return `<div class="segmented" role="radiogroup" aria-labelledby="${labelId}" data-count="${options.length}">${options
-      .map(
-        ([v, l]) =>
-          `<button role="radio" aria-checked="${v === value}" tabindex="${v === value ? 0 : -1}" data-set="${key}" data-value="${esc(v)}" data-k="seg-${key}-${esc(
-            v,
-          )}" title="${l}"><span>${l}</span></button>`,
-      )
+  /** Radio group; options are [value, label, extraHtml?]. Keeps exactly one tab stop. */
+  function segmented(key, value, options, labelId, cls = '') {
+    const anyChecked = options.some(([v]) => v === value);
+    return `<div class="segmented ${cls}" role="radiogroup" aria-labelledby="${labelId}" data-count="${options.length}">${options
+      .map(([v, l, extra], i) => {
+        const on = v === value;
+        return `<button role="radio" aria-checked="${on}" tabindex="${on || (!anyChecked && i === 0) ? 0 : -1}" data-set="${key}" data-value="${esc(
+          v,
+        )}" data-k="seg-${key}-${esc(v)}" title="${l}">${extra || ''}<span>${l}</span></button>`;
+      })
       .join('')}</div>`;
   }
 
@@ -598,7 +751,88 @@
     )}</div>`;
   }
 
-  function settingsSection() {
+  function hex6(v) {
+    const s = String(v || '').trim().toLowerCase();
+    return /^#[0-9a-f]{3}$/.test(s) ? `#${s[1]}${s[1]}${s[2]}${s[2]}${s[3]}${s[3]}` : s;
+  }
+
+  /** Colour picker: auto + presets + custom. Accent stores preset ids, the status bar colour stores hex. */
+  function swatches(key, value, labelId) {
+    const byId = key === 'accent';
+    const v = hex6(value);
+    const isAuto = !v || v === 'auto';
+    const match = Object.entries(PRESETS).find(([id, hex]) => v === id || v === hex);
+    const custom = !isAuto && !match && HEX.test(v);
+    const radios = [['auto', t('colorDefault'), '']]
+      .concat(Object.entries(PRESETS).map(([id, hex]) => [byId ? id : hex, t(`color_${id}`), hex]))
+      .map(([val, label, hex], i) => {
+        const on = isAuto ? i === 0 : match ? (byId ? val === match[0] : val === match[1]) : false;
+        const tab = on || (custom && i === 0) ? 0 : -1;
+        return `<button class="swatch ${hex ? '' : 'swatch-auto'}" role="radio" aria-checked="${on}" tabindex="${tab}" data-set="${key}" data-value="${esc(
+          val,
+        )}" data-k="sw-${key}-${esc(val)}" title="${label}" aria-label="${label}">${hex ? `<span class="swatch-dot" data-bg="${hex}"></span>` : `<span>${label}</span>`}</button>`;
+      })
+      .join('');
+    const customVal = custom ? v : '#888888';
+    return `<div class="swatches"><div class="swatch-group" role="radiogroup" aria-labelledby="${labelId}">${radios}</div>
+      <label class="swatch swatch-custom ${custom ? 'on' : ''}" title="${t('customColor')}">
+        <span class="swatch-dot" ${custom ? `data-bg="${customVal}"` : ''}></span>
+        <input type="color" value="${esc(customVal)}" data-color="${key}" data-k="color-${key}" aria-label="${t('customColor')}${custom ? ` (${esc(customVal)})` : ''}">
+      </label></div>`;
+  }
+
+  function level() {
+    const q = model.quota;
+    if (!q || q.unlimited || !(q.entitlement > 0)) {
+      return 4;
+    }
+    return clamp(Math.ceil((q.remaining / q.entitlement) * 4), 0, 4);
+  }
+
+  function glyph(style, lvl) {
+    const base = GLYPH_BASE[style];
+    return base ? `<span class="glyph" aria-hidden="true">${String.fromCodePoint(base + (4 - lvl))}</span>` : '<span class="glyph none" aria-hidden="true">–</span>';
+  }
+
+  /** Mimics the status bar item text (see statusBar.ts). */
+  function statusBarText() {
+    const q = model.quota;
+    const f = model.forecast;
+    const s = model.settings;
+    if (!q) {
+      return '';
+    }
+    if (q.unlimited) {
+      return '∞';
+    }
+    switch (s.display) {
+      case 'used':
+        return `${fmt(q.used)}/${fmt(q.entitlement)}`;
+      case 'percent':
+        return `${Math.round(q.usedPercent)}%`;
+      case 'dailyBudget':
+        return raw('perDay', fmt(f ? f.dailyBudget : 0));
+      default:
+        return fmt(q.remaining);
+    }
+  }
+
+  /** Live preview of the status bar item, shown in the Display group's heading. */
+  function statusBarPreview() {
+    const s = model.settings;
+    const c = s.statusBarColor && s.statusBarColor !== 'auto' ? resolveColor(s.statusBarColor) : '';
+    return `<span class="sb-item" aria-hidden="true" ${c ? `data-fg="${esc(c)}"` : ''}>${
+      s.statusBarIcon === 'none' ? '' : glyph(s.statusBarIcon, level())
+    }<span>${esc(statusBarText())}</span></span>`;
+  }
+
+  function group(iconSvg, title, body, note = '', side = '') {
+    return `<section class="card group"><div class="group-top"><h2 class="group-h">${iconSvg}<span>${title}</span></h2>${
+      note ? `<span class="group-note">${note}</span>` : ''
+    }${side}</div>${body}</section>`;
+  }
+
+  function settingsPanel() {
     const s = model.settings;
     const thresholds = (s.thresholds || []).slice().sort((a, b) => a - b);
     const chips = thresholds
@@ -622,54 +856,195 @@
       ? `<div class="snooze on">${icon.bellOff}<span>${t('snoozedUntil', until)}</span><button class="link" data-cmd="unsnooze" data-k="unsnooze">${t('unsnooze')}</button></div>`
       : `<button class="btn secondary small" data-cmd="snooze" data-k="snooze" ${s.warningsEnabled ? '' : 'disabled'}>${icon.bellOff}${t('snooze')}</button>`;
 
-    const hasCopilot = s.copilotCompletions !== undefined || s.copilotNextEdit !== undefined;
-    const copilot = hasCopilot
-      ? `<div class="group"><h3 class="group-h">${icon.spark}${t('copilotGroup')}<span class="group-note">${t('freeHint')}</span></h3>
-        ${s.copilotCompletions !== undefined ? row('copilotCompletions', s.copilotCompletions, t('copilotCompletions')) : ''}
-        ${s.copilotNextEdit !== undefined ? row('copilotNextEdit', s.copilotNextEdit, t('copilotNextEdit')) : ''}
-        <div class="btn-row"><button class="btn secondary small" data-cmd="manageCopilot" data-k="manage">${icon.sliders}${t('manageCopilot')}</button>
-        <button class="btn secondary small" data-cmd="openChat" data-k="chat">${icon.chat}${t('openChat')}</button></div></div>`
-      : `<div class="group"><div class="btn-row"><button class="btn secondary small" data-cmd="manageCopilot" data-k="manage">${icon.sliders}${t(
-          'manageCopilot',
-        )}</button><button class="btn secondary small" data-cmd="openChat" data-k="chat">${icon.chat}${t('openChat')}</button></div></div>`;
+    const lvl = level();
+    const display = group(
+      icon.monitor,
+      t('displayGroup'),
+      `<div class="field"><span class="field-label" id="lbl-display">${t('statusBarShows')}</span>${segmented(
+        'display',
+        s.display,
+        [
+          ['remaining', t('displayRemaining')],
+          ['used', t('displayUsed')],
+          ['percent', t('displayPercent')],
+          ['dailyBudget', t('displayDailyBudget')],
+        ],
+        'lbl-display',
+      )}</div>
+      <div class="field"><span class="field-label" id="lbl-sbicon">${t('statusBarIcon')}</span>${segmented(
+        'statusBarIcon',
+        s.statusBarIcon,
+        ['gauge', 'battery', 'ring', 'bars', 'none'].map((v) => [v, t(`icon_${v}`), glyph(v, lvl)]),
+        'lbl-sbicon',
+        'seg-glyphs',
+      )}</div>
+      <div class="field"><span class="field-label" id="lbl-sbcolor">${t('statusBarColor')}</span>${swatches('statusBarColor', s.statusBarColor, 'lbl-sbcolor')}</div>`,
+      '',
+      statusBarPreview(),
+    );
 
-    const body = `
-      <div class="group">
-        <div class="field"><span class="field-label" id="lbl-display">${t('statusBarShows')}</span>${segmented(
-          'display',
-          s.display,
-          [
-            ['remaining', t('displayRemaining')],
-            ['used', t('displayUsed')],
-            ['percent', t('displayPercent')],
-            ['dailyBudget', t('displayDailyBudget')],
-          ],
-          'lbl-display',
-        )}</div>
-      </div>
-      <div class="group"><h3 class="group-h">${icon.target}${t('budgetGroup')}</h3>
-        ${row('countWeekends', s.countWeekends, t('countWeekends'), t('countWeekendsHint'))}
-        <div class="row"><div class="row-text"><label class="row-label" for="reserve">${t('reserve')}</label><span class="row-hint">${t('reserveHint')}</span></div>
-          <input class="num" id="reserve" type="number" min="0" step="1" inputmode="numeric" value="${esc(s.reserve)}" data-k="reserve"></div>
-      </div>
-      <div class="group"><h3 class="group-h">${icon.bell}${t('warningsGroup')}</h3>
-        ${row('warningsEnabled', s.warningsEnabled, t('warnings'))}
-        <div class="field ${s.warningsEnabled ? '' : 'dim'}"><span class="field-label">${t('thresholds')}</span><div class="chips">${chips}${add}</div></div>
-        ${row('paceWarning', s.paceWarning, t('paceWarning'), t('paceWarningHint'))}
-        <div class="snooze-row">${snooze}</div>
-      </div>
-      <div class="group">
-        ${row('tipsEnabled', s.tipsEnabled, t('showTips'))}
-        ${providerControl()}
-      </div>
-      ${copilot}
-      <div class="group actions">
-        <button class="btn secondary small" data-cmd="refresh" data-k="act-refresh">${icon.refresh}${t('refresh')}</button>
+    const appearance = group(
+      icon.palette,
+      t('appearanceGroup'),
+      `<div class="field"><span class="field-label" id="lbl-accent">${t('accentColor')}</span>${swatches('accent', s.accent, 'lbl-accent')}</div>
+      ${row('tipsEnabled', s.tipsEnabled, t('showTips'))}`,
+    );
+
+    const budget = group(
+      icon.target,
+      t('budgetGroup'),
+      `${row('countWeekends', s.countWeekends, t('countWeekends'), t('countWeekendsHint'))}
+      <div class="row"><div class="row-text"><label class="row-label" for="reserve">${t('reserve')}</label><span class="row-hint">${t('reserveHint')}</span></div>
+        <input class="num" id="reserve" type="number" min="0" step="1" inputmode="numeric" value="${esc(s.reserve)}" data-k="reserve"></div>`,
+    );
+
+    const warnings = group(
+      icon.bell,
+      t('warningsGroup'),
+      `${row('warningsEnabled', s.warningsEnabled, t('warnings'))}
+      <div class="field ${s.warningsEnabled ? '' : 'dim'}"><span class="field-label">${t('thresholds')}</span><div class="chips">${chips}${add}</div></div>
+      ${row('paceWarning', s.paceWarning, t('paceWarning'), t('paceWarningHint'))}
+      ${row('surplusHint', s.surplusHint, t('surplusHintSetting'), t('surplusHintHint'))}
+      <div class="snooze-row">${snooze}</div>`,
+    );
+
+    const hasCopilot = s.copilotCompletions !== undefined || s.copilotNextEdit !== undefined;
+    const copilot = group(
+      icon.spark,
+      t('copilotGroup'),
+      `${s.copilotCompletions !== undefined ? row('copilotCompletions', s.copilotCompletions, t('copilotCompletions')) : ''}
+      ${s.copilotNextEdit !== undefined ? row('copilotNextEdit', s.copilotNextEdit, t('copilotNextEdit')) : ''}
+      <div class="btn-row"><button class="btn secondary small" data-cmd="manageCopilot" data-k="manage">${icon.sliders}${t('manageCopilot')}</button>
+      <button class="btn secondary small" data-cmd="openChat" data-k="chat">${icon.chat}${t('openChat')}</button></div>`,
+      hasCopilot ? t('freeHint') : '',
+    );
+
+    const tokenRow = `<div class="row"><div class="row-text"><span class="row-label">${t('billingToken')}</span><span class="row-hint">${
+      s.billingTokenSet ? `${icon.check}${t('tokenStored')}` : t('billingTokenHint')
+    }</span></div>${
+      s.billingTokenSet
+        ? `<button class="link subtle" data-cmd="clearBillingToken" data-k="tok-rm2">${t('removeToken')}</button>`
+        : `<button class="btn secondary small" data-cmd="configureBillingToken" data-k="tok-add2">${t('addToken')}</button>`
+    }</div>`;
+    const account = group(
+      icon.account,
+      t('accountGroup'),
+      `${providerControl()}
+      ${tokenRow}
+      ${row('activityTracking', s.activityTracking, t('activityTracking'), t('activityTrackingHint'))}
+      <div class="actions">
         <button class="btn secondary small" data-cmd="openBilling" data-k="act-billing">${icon.external}${t('openBilling')}</button>
         <button class="btn secondary small" data-cmd="openSettings" data-k="act-settings">${icon.sliders}${t('allSettings')}</button>
         <button class="btn secondary small" data-cmd="showLog" data-k="act-log">${icon.log}${t('showLog')}</button>
-      </div>`;
-    return collapsible('settings', t('quickSettings'), icon.sliders, body);
+      </div>`,
+    );
+
+    return `<div class="grid">${display}${appearance}${budget}${warnings}${copilot}${account}</div>`;
+  }
+
+  // ---------------------------------------------------------------- accent
+
+  function resolveColor(v) {
+    if (!v || v === 'auto') {
+      return undefined;
+    }
+    if (PRESETS[v]) {
+      return PRESETS[v];
+    }
+    return HEX.test(v) ? hex6(v) : undefined;
+  }
+
+  function rgb(hex) {
+    const h = hex6(hex);
+    return /^#[0-9a-f]{6}$/.test(h) ? [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) : undefined;
+  }
+
+  function lum(c) {
+    const [r, g, b] = c.map((v) => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  function contrast(a, b) {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  }
+
+  /** Mixes c towards `to` until it reaches the given contrast against bg. */
+  function ensureContrast(c, bg, to, min) {
+    for (let t = 0; t <= 1; t += 0.05) {
+      const m = c.map((v, i) => Math.round(v + (to[i] - v) * t));
+      if (contrast(m, bg) >= min) {
+        return m;
+      }
+    }
+    return to;
+  }
+
+  const css = (c) => `rgb(${c.join(' ')})`;
+
+  /** Applies model.appearance.accentColor as CSS variables (tuned for contrast on the current theme). */
+  function applyAccent() {
+    const raw = model && model.appearance && model.appearance.accentColor;
+    const c = raw ? rgb(raw) : undefined;
+    const hc = document.body.classList.contains('vscode-high-contrast') || document.body.classList.contains('vscode-high-contrast-light');
+    const light = document.body.classList.contains('vscode-light') || document.body.classList.contains('vscode-high-contrast-light');
+    app.classList.toggle('has-accent', !!(raw && !hc));
+    if (!raw || hc) {
+      ['--accent', '--accent-solid', '--accent-fg'].forEach((p) => app.style.removeProperty(p));
+      return;
+    }
+    if (!c) {
+      app.style.setProperty('--accent', raw);
+      app.style.setProperty('--accent-solid', raw);
+      app.style.setProperty('--accent-fg', '#ffffff');
+      return;
+    }
+    const bg = light ? [255, 255, 255] : [30, 30, 30];
+    // Graphics need 3:1 against the panel; buttons need 4.5:1 for white text.
+    app.style.setProperty('--accent', css(ensureContrast(c, bg, light ? [0, 0, 0] : [255, 255, 255], 3)));
+    app.style.setProperty('--accent-solid', css(ensureContrast(c, [255, 255, 255], [0, 0, 0], 4.5)));
+    app.style.setProperty('--accent-fg', '#ffffff');
+  }
+
+  // ---------------------------------------------------------------- tabs
+
+  function tabsBar() {
+    const labels = { overview: t('tabOverview'), history: t('tabHistory'), tips: t('tabTips'), settings: t('tabSettings') };
+    return `<div class="tabs" role="tablist" aria-label="${t('title')}">${TABS.map((id) => {
+      const on = id === ui.tab;
+      return `<button class="tab" role="tab" id="tab-${id}" aria-selected="${on}" aria-controls="panel" tabindex="${on ? 0 : -1}" data-tab="${id}" data-k="tab-${id}">${labels[id]}</button>`;
+    }).join('')}</div>`;
+  }
+
+  function overviewPanel() {
+    const urgentOverage = model.quota.overageCount > 0;
+    return `${surplusBanner()}<div class="layout">
+      <div class="col col-a">${hero()}${urgentOverage ? overage() : ''}</div>
+      <div class="col col-b">${tiles()}${chartCard()}${sparsamStrip()}</div></div>`;
+  }
+
+  function historyPanel() {
+    return `<div class="grid">${activityCard()}${reviewCard()}${modelsCard()}</div>`;
+  }
+
+  function tipsPanel() {
+    return `<div class="grid">${tipsCard()}${sparsamCard()}${allTipsCard()}</div>`;
+  }
+
+  function panel() {
+    switch (ui.tab) {
+      case 'history':
+        return historyPanel();
+      case 'tips':
+        return tipsPanel();
+      case 'settings':
+        return settingsPanel();
+      default:
+        return overviewPanel();
+    }
   }
 
   // ---------------------------------------------------------------- states
@@ -739,12 +1114,8 @@
     if (model.state === 'loading') {
       html = skeleton();
     } else if (model.state === 'ok' && model.quota) {
-      const urgentOverage = model.quota.overageCount > 0;
-      html = `${header()}${staleBanner()}<div class="layout">
-        <div class="col col-a">${hero()}${urgentOverage ? overage() : ''}</div>
-        <div class="col col-b">${tiles()}${chartCard()}</div>
-        <div class="col col-c"><div class="stack">${tipsCard()}${urgentOverage ? '' : overage()}${allTips()}</div>
-        <div class="stack">${settingsSection()}</div></div></div>`;
+      html = `${header()}${staleBanner()}${tabsBar()}
+        <div class="panel panel-${ui.tab}" id="panel" role="tabpanel" aria-labelledby="tab-${ui.tab}" tabindex="0">${panel()}</div>`;
     } else {
       html = `<div class="state-wrap">${emptyState(model.state === 'ok' ? 'error' : model.state)}</div>`;
     }
@@ -753,6 +1124,7 @@
     app.classList.toggle('intro', intro);
     app.setAttribute('aria-busy', String(model.state === 'loading'));
     app.innerHTML = html;
+    applyAccent();
     applyGeometry();
     drawChart();
     observeChart();
@@ -799,6 +1171,12 @@
       e.style.setProperty('--f', el.getAttribute('data-f'));
       e.style.setProperty('--d', `${Number(el.getAttribute('data-seg')) * 140}ms`);
     });
+    app.querySelectorAll('[data-bg]').forEach((el) => {
+      /** @type {HTMLElement} */ (el).style.background = el.getAttribute('data-bg') || '';
+    });
+    app.querySelectorAll('[data-fg]').forEach((el) => {
+      /** @type {HTMLElement} */ (el).style.color = el.getAttribute('data-fg') || '';
+    });
   }
 
   function observeChart() {
@@ -826,6 +1204,10 @@
   function setSetting(key, value) {
     if (model && model.settings) {
       model.settings[key] = value;
+      if (key === 'accent' && model.appearance) {
+        // Optimistic: the extension sends the resolved colour with the next model.
+        model.appearance.accentColor = resolveColor(String(value));
+      }
     }
     post({ type: 'setSetting', key, value });
     render();
@@ -848,8 +1230,13 @@
 
   app.addEventListener('click', (ev) => {
     const target = /** @type {HTMLElement} */ (ev.target);
-    const el = /** @type {HTMLElement | null} */ (target.closest('[data-cmd],[data-set],[data-action]'));
+    const el = /** @type {HTMLElement | null} */ (target.closest('[data-tab],[data-cmd],[data-set],[data-action]'));
     if (!el || !model || /** @type {HTMLButtonElement} */ (el).disabled) {
+      return;
+    }
+    const tab = el.getAttribute('data-tab');
+    if (tab) {
+      selectTab(tab, false);
       return;
     }
     const cmd = el.getAttribute('data-cmd');
@@ -871,13 +1258,9 @@
     }
     const action = el.getAttribute('data-action');
     switch (action) {
-      case 'toggle': {
-        const id = /** @type {string} */ (el.getAttribute('data-section'));
-        ui.open[id] = !ui.open[id];
-        persist();
-        render();
+      case 'enableActivity':
+        setSetting('activityTracking', true);
         break;
-      }
       case 'tipPrev':
       case 'tipNext': {
         const tips = orderedTips();
@@ -908,8 +1291,33 @@
     }
   });
 
+  function selectTab(id, focus) {
+    if (!TABS.includes(id)) {
+      return;
+    }
+    const changed = id !== ui.tab;
+    ui.tab = id;
+    addingThreshold = false;
+    persist();
+    if (changed) {
+      render();
+      window.scrollTo(0, 0);
+    }
+    if (focus) {
+      const el = /** @type {HTMLElement | null} */ (app.querySelector(`[data-tab="${id}"]`));
+      if (el) {
+        el.focus();
+      }
+    }
+  }
+
   app.addEventListener('change', (ev) => {
     const el = /** @type {HTMLInputElement} */ (ev.target);
+    const colorKey = el.getAttribute && el.getAttribute('data-color');
+    if (colorKey && HEX.test(el.value)) {
+      setSetting(colorKey, el.value.toLowerCase());
+      return;
+    }
     if (el.id === 'reserve') {
       const v = Math.max(0, Math.round(Number(el.value) || 0));
       el.value = String(v);
@@ -938,6 +1346,15 @@
     }
     if (el.id === 'reserve' && ev.key === 'Enter') {
       el.blur();
+      return;
+    }
+    if (el.getAttribute('role') === 'tab') {
+      const i = TABS.indexOf(ui.tab);
+      const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: TABS.length - 1 }[ev.key];
+      if (next !== undefined) {
+        ev.preventDefault();
+        selectTab(TABS[(next + TABS.length) % TABS.length], true);
+      }
       return;
     }
     if (el.getAttribute('role') === 'radio') {

@@ -7,8 +7,12 @@ import * as vscode from 'vscode';
  */
 export function dashboardStrings(): Record<string, string> {
   return {
-    // Header / footer
+    // Header / tabs
     title: vscode.l10n.t('Copilot Contingent'),
+    tabOverview: vscode.l10n.t('Overview'),
+    tabHistory: vscode.l10n.t('History'),
+    tabTips: vscode.l10n.t('Tips'),
+    tabSettings: vscode.l10n.t('Settings'),
     updated: vscode.l10n.t('Updated {0}'),
     justNow: vscode.l10n.t('just now'),
     offline: vscode.l10n.t('Offline'),
@@ -27,6 +31,47 @@ export function dashboardStrings(): Record<string, string> {
     allowanceUsed: vscode.l10n.t('Allowance used'),
     plan: vscode.l10n.t('Plan'),
 
+    // Surplus ("use it or lose it")
+    surplusBannerHint: vscode.l10n.t('A good moment for bigger tasks. Unused allowance expires at reset.'),
+
+    // @sparsam
+    askSparsam: vscode.l10n.t('Ask @sparsam'),
+    sparsamStrip: vscode.l10n.t('Simple questions, no premium requests'),
+    sparsamTitle: vscode.l10n.t('Free answers with @sparsam'),
+    sparsamText: vscode.l10n.t('Ask simple questions with @sparsam in chat. An included (0x) model answers, so it costs no premium requests.'),
+    sparsamBtw: vscode.l10n.t("{0} asks a quick side question that doesn't touch your main chat."),
+
+    // History: activity
+    activity: vscode.l10n.t('Activity'),
+    activeNow: vscode.l10n.t('active'),
+    clear: vscode.l10n.t('Clear'),
+    durM: vscode.l10n.t('{0} min'),
+    durH: vscode.l10n.t('{0} h'),
+    durHM: vscode.l10n.t('{0} h {1} min'),
+    activityEmpty: vscode.l10n.t('Nothing recorded yet'),
+    activityEmptyText: vscode.l10n.t('While you work, the active editor time and the requests used are recorded per git branch. The data stays on this machine.'),
+    activityOffTitle: vscode.l10n.t('Activity tracking is off'),
+    activityOffText: vscode.l10n.t('Turn it on to see what you worked on, how long it took and how many requests it used.'),
+    activityPaused: vscode.l10n.t('Tracking is paused.'),
+    turnOn: vscode.l10n.t('Turn on'),
+
+    // History: monthly review
+    review: vscode.l10n.t('Monthly review'),
+    running: vscode.l10n.t('running'),
+    peakDay: vscode.l10n.t('Peak {0} on {1}'),
+    avgActiveDay: vscode.l10n.t('Ø {0} per active day'),
+    reviewEmpty: vscode.l10n.t('Your monthly review fills up as cycles go by.'),
+
+    // History: per model
+    perModel: vscode.l10n.t('Per model'),
+    modelsNeedToken: vscode.l10n.t("Needs a GitHub token with 'Plan' read permission. It is stored securely in VS Code."),
+    addToken: vscode.l10n.t('Add token'),
+    configureToken: vscode.l10n.t('Change token'),
+    removeToken: vscode.l10n.t('Remove token'),
+    modelsLoading: vscode.l10n.t('Loading usage per model…'),
+    modelsError: vscode.l10n.t('Could not load usage per model'),
+    modelsEmpty: vscode.l10n.t('No usage recorded for this period yet.'),
+
     // Tiles
     today: vscode.l10n.t('Today'),
     ofBudget: vscode.l10n.t('of {0} budget'),
@@ -35,16 +80,9 @@ export function dashboardStrings(): Record<string, string> {
     pace: vscode.l10n.t('Pace'),
     perDay: vscode.l10n.t('{0}/day'),
     planPerDay: vscode.l10n.t('plan {0}/day'),
-    buffer: vscode.l10n.t('Buffer'),
-    aheadOfPlan: vscode.l10n.t('ahead of plan · {0} days'),
-    overPlan: vscode.l10n.t('over plan · {0} days'),
     atReset: vscode.l10n.t('At reset'),
     projectedOf: vscode.l10n.t('projected of {0}'),
     emptyOn: vscode.l10n.t('empty on {0}'),
-    streak: vscode.l10n.t('Streak'),
-    streakOne: vscode.l10n.t('1 day'),
-    streakMany: vscode.l10n.t('{0} days'),
-    withinBudget: vscode.l10n.t('within budget'),
     last7: vscode.l10n.t('Last 7 days'),
     avgPerDay: vscode.l10n.t('Ø {0}/day'),
     cycleAverage: vscode.l10n.t('Cycle average'),
@@ -75,8 +113,33 @@ export function dashboardStrings(): Record<string, string> {
     allTips: vscode.l10n.t('All tips'),
     openGuide: vscode.l10n.t('Open guide'),
 
-    // Quick settings
-    quickSettings: vscode.l10n.t('Quick settings'),
+    // Settings
+    displayGroup: vscode.l10n.t('Display'),
+    appearanceGroup: vscode.l10n.t('Appearance'),
+    accountGroup: vscode.l10n.t('Account'),
+    statusBarIcon: vscode.l10n.t('Status bar icon'),
+    icon_gauge: vscode.l10n.t('Gauge'),
+    icon_battery: vscode.l10n.t('Battery'),
+    icon_ring: vscode.l10n.t('Ring'),
+    icon_bars: vscode.l10n.t('Bars'),
+    icon_none: vscode.l10n.t('None'),
+    statusBarColor: vscode.l10n.t('Status bar color'),
+    accentColor: vscode.l10n.t('Accent color'),
+    customColor: vscode.l10n.t('Custom color'),
+    colorDefault: vscode.l10n.t('Default'),
+    color_teal: vscode.l10n.t('Teal'),
+    color_violet: vscode.l10n.t('Violet'),
+    color_blue: vscode.l10n.t('Blue'),
+    color_green: vscode.l10n.t('Green'),
+    color_orange: vscode.l10n.t('Orange'),
+    color_pink: vscode.l10n.t('Pink'),
+    surplusHintSetting: vscode.l10n.t('Leftover reminder'),
+    surplusHintHint: vscode.l10n.t('Near reset, point out allowance that would expire unused'),
+    activityTracking: vscode.l10n.t('Track activity'),
+    activityTrackingHint: vscode.l10n.t('Active time per git branch, stored locally'),
+    billingToken: vscode.l10n.t('Usage per model'),
+    billingTokenHint: vscode.l10n.t("GitHub token with 'Plan' read permission"),
+    tokenStored: vscode.l10n.t('Token stored securely'),
     statusBarShows: vscode.l10n.t('Status bar shows'),
     displayRemaining: vscode.l10n.t('Remaining'),
     displayUsed: vscode.l10n.t('Used'),

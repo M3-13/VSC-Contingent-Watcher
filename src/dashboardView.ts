@@ -25,6 +25,10 @@ const COMMANDS: ReadonlySet<string> = new Set<DashboardCommand>([
   'snooze',
   'unsnooze',
   'openWalkthrough',
+  'configureBillingToken',
+  'clearBillingToken',
+  'askSparsam',
+  'clearActivity',
 ]);
 
 const SETTINGS: ReadonlySet<string> = new Set<DashboardSettingKey>([
@@ -38,6 +42,11 @@ const SETTINGS: ReadonlySet<string> = new Set<DashboardSettingKey>([
   'authProvider',
   'copilotCompletions',
   'copilotNextEdit',
+  'accent',
+  'statusBarIcon',
+  'statusBarColor',
+  'surplusHint',
+  'activityTracking',
 ]);
 
 /** Sidebar dashboard: renders a {@link DashboardModel} in a webview. */
@@ -46,13 +55,14 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider, vscode
 
   private view?: vscode.WebviewView;
   private readonly disposables: vscode.Disposable[] = [];
+  /** media/ (dashboard assets and the status bar icon font). */
   private readonly mediaRoot: vscode.Uri;
 
   constructor(
     extensionUri: vscode.Uri,
     private readonly handlers: DashboardHandlers,
   ) {
-    this.mediaRoot = vscode.Uri.joinPath(extensionUri, 'media', 'dashboard');
+    this.mediaRoot = vscode.Uri.joinPath(extensionUri, 'media');
   }
 
   /** True while the view is resolved and on screen. */
@@ -108,13 +118,16 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider, vscode
 
   private html(webview: vscode.Webview): string {
     const nonce = crypto.randomBytes(16).toString('base64');
-    const css = webview.asWebviewUri(vscode.Uri.joinPath(this.mediaRoot, 'dashboard.css'));
-    const js = webview.asWebviewUri(vscode.Uri.joinPath(this.mediaRoot, 'dashboard.js'));
+    const css = webview.asWebviewUri(vscode.Uri.joinPath(this.mediaRoot, 'dashboard', 'dashboard.css'));
+    const js = webview.asWebviewUri(vscode.Uri.joinPath(this.mediaRoot, 'dashboard', 'dashboard.js'));
+    // Loaded with the FontFace API by the script for the status bar icon previews.
+    const font = webview.asWebviewUri(vscode.Uri.joinPath(this.mediaRoot, 'contingent-icons.woff'));
     const csp = [
       "default-src 'none'",
       `style-src ${webview.cspSource}`,
       `script-src 'nonce-${nonce}'`,
       `img-src ${webview.cspSource} data:`,
+      `font-src ${webview.cspSource}`,
     ].join('; ');
     return `<!DOCTYPE html>
 <html lang="${vscode.env.language}">
@@ -125,7 +138,7 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider, vscode
 <link rel="stylesheet" href="${css}">
 <title>${vscode.l10n.t('Copilot Contingent')}</title>
 </head>
-<body>
+<body data-icon-font="${font}">
 <main id="app" aria-busy="true"></main>
 <script nonce="${nonce}" src="${js}"></script>
 </body>

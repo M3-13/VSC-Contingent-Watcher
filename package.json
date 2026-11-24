@@ -2,7 +2,7 @@
   "name": "copilot-contingent-watcher",
   "displayName": "%displayName%",
   "description": "%description%",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "m3-13",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -64,6 +64,111 @@
         "default": {
           "fontPath": "media/contingent-icons.woff",
           "fontCharacter": "\\E005"
+        }
+      },
+      "contingent-battery-4": {
+        "description": "Copilot Contingent battery: plenty left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E006"
+        }
+      },
+      "contingent-battery-3": {
+        "description": "Copilot Contingent battery: three quarters left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E007"
+        }
+      },
+      "contingent-battery-2": {
+        "description": "Copilot Contingent battery: half left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E008"
+        }
+      },
+      "contingent-battery-1": {
+        "description": "Copilot Contingent battery: running low",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E009"
+        }
+      },
+      "contingent-battery-0": {
+        "description": "Copilot Contingent battery: empty or exhausted",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E00A"
+        }
+      },
+      "contingent-ring-4": {
+        "description": "Copilot Contingent ring: plenty left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E00B"
+        }
+      },
+      "contingent-ring-3": {
+        "description": "Copilot Contingent ring: three quarters left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E00C"
+        }
+      },
+      "contingent-ring-2": {
+        "description": "Copilot Contingent ring: half left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E00D"
+        }
+      },
+      "contingent-ring-1": {
+        "description": "Copilot Contingent ring: running low",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E00E"
+        }
+      },
+      "contingent-ring-0": {
+        "description": "Copilot Contingent ring: empty or exhausted",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E00F"
+        }
+      },
+      "contingent-bars-4": {
+        "description": "Copilot Contingent bars: plenty left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E010"
+        }
+      },
+      "contingent-bars-3": {
+        "description": "Copilot Contingent bars: three quarters left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E011"
+        }
+      },
+      "contingent-bars-2": {
+        "description": "Copilot Contingent bars: half left",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E012"
+        }
+      },
+      "contingent-bars-1": {
+        "description": "Copilot Contingent bars: running low",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E013"
+        }
+      },
+      "contingent-bars-0": {
+        "description": "Copilot Contingent bars: empty or exhausted",
+        "default": {
+          "fontPath": "media/contingent-icons.woff",
+          "fontCharacter": "\\E014"
         }
       }
     },

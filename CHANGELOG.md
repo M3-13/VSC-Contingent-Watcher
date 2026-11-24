@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Dashboard mit 4 Tabs: Übersicht, Verlauf, Tipps, Einstellungen
+- `@sparsam` im Copilot-Chat: Antworten mit inklusivem Modell, `/btw` für Zwischenfragen
+- Hinweis, wenn Kontingent am Monatsende ungenutzt verfallen würde
+- Verlauf: aktive Zeit und Verbrauch pro Git-Branch, Monatsrückblick, Verbrauch pro Modell (optional mit Token)
+- Akzentfarbe, Statusleisten-Icon (Tachometer, Batterie, Ring, Balken) und -Farbe einstellbar
+
 ## 0.1.0
 
 - Initial release.
