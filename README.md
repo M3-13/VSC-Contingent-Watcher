@@ -75,12 +75,16 @@ Das zeigt, welches Modell wie viel deines Kontingents verbraucht. Dafür braucht
 
 ## Spartipps
 
-- Für Routine ein enthaltenes Modell (0x) nutzen, Premium-Modelle für schwierige Probleme aufsparen. Die Modellauswahl zeigt die Kosten.
-- Inline-Vervollständigungen und Next Edit Suggestions kosten kein Kontingent.
-- Für kleine Änderungen Ask/Edit statt Agent-Modus.
-- Kontext gleich mitgeben, Fragen bündeln, pro Thema einen neuen Chat starten.
-- Wiederkehrende Regeln in `.github/copilot-instructions.md` ablegen.
-- In der GitHub-Abrechnung ein Ausgabenlimit setzen.
+Seit Mitte 2026 rechnen viele Pläne Copilot nutzungsbasiert ab, in AI-Credits nach Tokens. Der größte Kostentreiber ist deshalb die Kontextgröße.
+
+- **Neuer Chat pro Aufgabe:** Lange Verläufe werden bei jeder Anfrage mitgeschickt.
+- **Gezielter Kontext:** Häng `#file` oder `#selection` an statt `#codebase`, und füge aus Logs nur die relevanten Zeilen ein.
+- **Weniger Tools:** Aktiviere nur die Tools und MCP-Server, die die Aufgabe braucht.
+- **Passendes Modell:** Nimm das günstigste Modell, das reicht, oder *Auto*. Starke Reasoning-Modelle sind für schwere Probleme da.
+- **Instructions und Prompt-Dateien:** Projektregeln gehören in `.github/copilot-instructions.md`, wiederkehrende Aufgaben in `.prompt.md`-Dateien.
+- **Kostenlos:** Inline-Vorschläge und Next Edit Suggestions verbrauchen kein Kontingent.
+
+Im Dashboard zeigt der Tab *Tipps* immer nur die Tipps, die gerade zu deiner Lage passen. Es sind rund 40, je nach Status, Zeitpunkt im Monat und drohendem Verfall.
 
 ## Entwicklung
 
