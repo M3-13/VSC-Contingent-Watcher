@@ -361,6 +361,8 @@ button { font: inherit; color: inherit; }
   pointer-events: none;
 }
 .has-text .hint { display: none; }
+.box .model-btn { align-self: center; height: 24px; margin: 0; }
+.box .hint + .model-btn { margin-left: 2px; }
 
 /* Narrow panels: icon-only card actions, no input hint. */
 @media (max-width: 460px) {

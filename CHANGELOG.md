@@ -2,12 +2,11 @@
 
 ## 0.2.0
 
-- btw: Nebenfragen mit Chat- und Editor-Kontext im eigenen Panel (Strg+Alt+Umschalt+B)
+- btw: Nebenfragen mit Chat- und Editor-Kontext im eigenen Panel (Strg+Alt+Umschalt+B), mit Chat-Modell oder Gratis-Modell
 - Copilot-Optionen im Dashboard: Eagerness, Vorschläge pro Sprache, Snooze
 - Eigene Statusleisten-Farbe bleibt auch bei Warnungen sichtbar
 
 - Dashboard mit 4 Tabs: Übersicht, Verlauf, Tipps, Einstellungen
-- `@sparsam` im Copilot-Chat: Antworten mit inklusivem Modell, `/btw` für Zwischenfragen
 - Hinweis, wenn Kontingent am Monatsende ungenutzt verfallen würde
 - Verlauf: aktive Zeit und Verbrauch pro Git-Branch, Monatsrückblick, Verbrauch pro Modell (optional mit Token)
 - Akzentfarbe, Statusleisten-Icon (Tachometer, Batterie, Ring, Balken) und -Farbe einstellbar

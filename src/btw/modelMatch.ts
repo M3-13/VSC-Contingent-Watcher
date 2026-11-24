@@ -79,9 +79,10 @@ export function matchModel<T extends LmInfo>(models: readonly T[], ref: string |
   return undefined;
 }
 
-/** Value of `contingentWatcher.btw.model` that means "same model as the chat". */
-export const BTW_MODEL_FROM_CHAT = 'chat';
+/** `contingentWatcher.btw.model`: the current chat's model, or a free (included) model. */
+export type BtwMode = 'chat' | 'included';
 
-export function isChatSetting(value: unknown): boolean {
-  return typeof value !== 'string' || !value.trim() || value.trim().toLowerCase() === BTW_MODEL_FROM_CHAT;
+/** Normalises the setting value; anything unknown means 'chat'. */
+export function btwModeOf(value: unknown): BtwMode {
+  return typeof value === 'string' && value.trim().toLowerCase() === 'included' ? 'included' : 'chat';
 }

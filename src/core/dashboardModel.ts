@@ -149,7 +149,9 @@ export interface DashboardModel {
     alignment: 'left' | 'right';
     /** Optional API base URL override (empty = automatic). */
     apiUrl: string;
-    /** Model families @sparsam and btw may use, in order. */
+    /** Which model btw uses: the current chat model or a free (included) model. */
+    btwModel: 'chat' | 'included';
+    /** Included model families btw may use in 'included' mode, in order. */
     preferredModels: string[];
     /** Include the current Copilot chat conversation as btw context. */
     btwIncludeChat: boolean;
@@ -179,7 +181,6 @@ export type DashboardCommand =
   | 'openWalkthrough'
   | 'configureBillingToken'
   | 'clearBillingToken'
-  | 'askSparsam'
   | 'clearActivity'
   | 'btw'
   | 'snoozeCompletions';
@@ -205,6 +206,7 @@ export type DashboardSettingKey =
   | 'alignment'
   | 'apiUrl'
   | 'preferredModels'
+  | 'btwModel'
   | 'btwIncludeChat'
   | 'copilotEagerness'
   | 'copilotLanguage';

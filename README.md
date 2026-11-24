@@ -10,8 +10,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
   - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit pro Git-Branch, mit Verbrauch), Monatsrückblick, Verbrauch pro Modell
   - **Tipps:** Spartipps passend zur aktuellen Lage
   - **Einstellungen:** Anzeige, Warnungen, Budget, Akzentfarbe, Statusleisten-Icon und -Farbe, Copilot-Schalter
-- **`@sparsam` im Copilot-Chat:** beantwortet einfache Fragen mit einem inklusiven Modell (0x), ohne Premium-Requests. `@sparsam /btw …` ist für schnelle Zwischenfragen, ohne den Haupt-Chat zu belasten.
-- **btw – Nebenfrage wie in Claude Code** (`Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B`): Du stellst eine kurze Zwischenfrage im BTW-Panel unten. Sie kennt einen Schnappschuss deines aktuellen Copilot-Chats und Editors, wird von einem inklusiven Modell beantwortet und landet nicht in deinem Chat.
+- **btw – Nebenfrage wie in Claude Code** (`Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B`): Du stellst eine kurze Zwischenfrage im BTW-Panel unten. Sie kennt einen Schnappschuss deines aktuellen Copilot-Chats und Editors und landet nicht in deinem Chat. Modell wählbar: **wie im Chat** (Standard) oder **Gratis-Modell** (inklusiv, keine Premium-Requests).
 - **Hinweis gegen Verfall:** In der letzten Monatswoche meldet die Extension, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.
 - Berechnet ein **Tagesbudget** bis zum Reset (optional ohne Wochenenden, mit Reserve).
 - Prognostiziert dein Tempo und zeigt, an welchem Tag das Kontingent bei gleichem Verbrauch leer wäre.
@@ -46,7 +45,8 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `contingentWatcher.warnings.surplusHint` | `true` | Hinweis, wenn Kontingent ungenutzt verfallen würde. |
 | `contingentWatcher.activity.enabled` | `true` | Aktive Zeit und Verbrauch pro Git-Branch aufzeichnen (nur lokal). |
 | `contingentWatcher.btw.includeChat` | `true` | Den aktuellen Copilot-Chat als Kontext für btw nutzen (lokal gelesen). |
-| `contingentWatcher.chat.preferredModels` | `gpt-5-mini, gpt-4.1, gpt-4o` | Modelle, die `@sparsam` nutzen darf (nur inklusive Modelle eintragen). |
+| `contingentWatcher.btw.model` | `chat` | Modell für btw: `chat` (wie im Chat) oder `included` (Gratis-Modell). |
+| `contingentWatcher.chat.preferredModels` | `gpt-5-mini, gpt-4.1, gpt-4o` | Gratis-Modelle für btw im Modus `included` (nur inklusive Modelle eintragen). |
 
 ## Befehle
 

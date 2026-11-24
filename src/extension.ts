@@ -17,7 +17,6 @@ import { ProviderId } from './auth';
 import { ActivityTracker } from './activityTracker';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
-import { registerSparsam } from './chat/sparsam';
 import { BtwViewProvider, btwCommand } from './btw/btwView';
 import { resolveColor } from './core/appearance';
 import { expectedSurplus } from './core/surplus';
@@ -46,6 +45,7 @@ const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   apiUrl: 'auth.apiUrl',
   preferredModels: 'chat.preferredModels',
   btwIncludeChat: 'btw.includeChat',
+  btwModel: 'btw.model',
 };
 
 
@@ -216,6 +216,7 @@ class Controller implements vscode.Disposable {
         apiUrl: own.get<string>('auth.apiUrl', ''),
         preferredModels: own.get<string[]>('chat.preferredModels', ['gpt-5-mini', 'gpt-4.1', 'gpt-4o']),
         btwIncludeChat: own.get<boolean>('btw.includeChat', true),
+        btwModel: own.get<string>('btw.model', 'chat') === 'included' ? 'included' : 'chat',
         accent: this.cfg.accent,
         statusBarIcon: this.cfg.statusBarIcon,
         statusBarColor: this.cfg.statusBarColor,
@@ -349,8 +350,6 @@ class Controller implements vscode.Disposable {
         return this.billing.configure();
       case 'clearBillingToken':
         return this.billing.clear();
-      case 'askSparsam':
-        return vscode.commands.executeCommand('workbench.action.chat.open', { query: '@sparsam ', isPartialQuery: true });
       case 'clearActivity': {
         const yes = vscode.l10n.t('Clear');
         const ok = await vscode.window.showWarningMessage(vscode.l10n.t('Clear the recorded activity history?'), { modal: true }, yes);
@@ -390,6 +389,8 @@ class Controller implements vscode.Disposable {
       v = value === 'left' ? 'left' : 'right';
     } else if (key === 'apiUrl') {
       v = typeof value === 'string' ? value.trim() : '';
+    } else if (key === 'btwModel') {
+      v = value === 'included' ? 'included' : 'chat';
     } else if (key === 'preferredModels') {
       v = Array.isArray(value) ? [...new Set(value.map((x) => String(x).trim()).filter(Boolean))] : undefined;
     } else if (key === 'thresholds') {
@@ -422,12 +423,10 @@ export function activate(context: vscode.ExtensionContext): void {
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
-    registerSparsam(context, log),
     btw,
     vscode.window.registerWebviewViewProvider(BtwViewProvider.viewId, btw),
     vscode.commands.registerCommand('contingentWatcher.btw', () => btwCommand(btw)),
     vscode.commands.registerCommand('contingentWatcher.btw.clear', () => btw.clear()),
-    vscode.commands.registerCommand('contingentWatcher.askSparsam', () => ctl.onDashboardCommand('askSparsam')),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
     vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.refresh()),

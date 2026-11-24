@@ -210,11 +210,6 @@
         "category": "Copilot Contingent"
       },
       {
-        "command": "contingentWatcher.askSparsam",
-        "title": "%cmd.askSparsam%",
-        "category": "Copilot Contingent"
-      },
-      {
         "command": "contingentWatcher.configureBillingToken",
         "title": "%cmd.configureBillingToken%",
         "category": "Copilot Contingent"
@@ -229,21 +224,6 @@
         "title": "%cmd.btwClear%",
         "category": "Copilot Contingent",
         "icon": "$(clear-all)"
-      }
-    ],
-    "chatParticipants": [
-      {
-        "id": "contingentWatcher.sparsam",
-        "name": "sparsam",
-        "fullName": "Sparsam",
-        "description": "%chat.description%",
-        "isSticky": false,
-        "commands": [
-          {
-            "name": "btw",
-            "description": "%chat.btw%"
-          }
-        ]
       }
     ],
     "viewsContainers": {

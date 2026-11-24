@@ -192,7 +192,7 @@ export function dashboardStrings(): Record<string, string> {
     manageCopilot: vscode.l10n.t('Manage Copilot'),
     openChat: vscode.l10n.t('Open chat'),
     chatGroup: vscode.l10n.t('Chat'),
-    preferredModels: vscode.l10n.t('@sparsam & btw models'),
+    preferredModels: vscode.l10n.t('@sparsam models'),
     preferredModelsHint: vscode.l10n.t('Tried in this order'),
     addModel: vscode.l10n.t('Add model'),
     removeModel: vscode.l10n.t('Remove {0}'),
