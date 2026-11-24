@@ -71,21 +71,86 @@ function mdText(v: unknown): string | undefined {
 
 // ------------------------------------------------------------------ entry
 
+export interface ChatSessionInfo {
+  /** Recent turns, if the session has any usable ones. */
+  snapshot?: ChatSnapshot;
+  /** Model selected in the chat (e.g. "copilot/claude-sonnet-4.5"), if recorded. */
+  modelId?: string;
+}
+
 /** Parses the text of a session file (JSON or JSONL) into recent turns. */
 export function parseChatSession(text: string, opts: ParseOptions = {}): ChatSnapshot | undefined {
+  return parseChatSessionInfo(text, opts)?.snapshot;
+}
+
+/** Parses a session file into recent turns and the chat's current model. Never throws. */
+export function parseChatSessionInfo(text: string, opts: ParseOptions = {}): ChatSessionInfo | undefined {
   try {
     const session = parseSessionObject(text);
     if (!session) {
       return undefined;
     }
     const turns = extractTurns(session, opts);
-    if (turns.length === 0) {
-      return undefined;
-    }
-    return selectRecentTurns(turns, opts);
+    const info: ChatSessionInfo = {
+      snapshot: turns.length ? selectRecentTurns(turns, opts) : undefined,
+      modelId: extractSessionModel(session),
+    };
+    return info.snapshot || info.modelId ? info : undefined;
   } catch {
     return undefined;
   }
+}
+
+// ------------------------------------------------------------------ model
+
+const MAX_MODEL_REF = 200;
+
+/** A model reference: a string id or an object with `identifier` / `id` / `metadata.id`. */
+function modelRef(v: unknown): string | undefined {
+  let ref: string | undefined;
+  if (typeof v === 'string') {
+    ref = v;
+  } else if (isObj(v)) {
+    ref =
+      str(v.identifier) ??
+      str(v.id) ??
+      str(v.modelId) ??
+      (isObj(v.metadata) ? str(v.metadata.id) ?? str(v.metadata.family) : undefined);
+  }
+  ref = ref?.trim();
+  return ref && ref.length <= MAX_MODEL_REF ? ref : undefined;
+}
+
+/**
+ * The model currently selected in the chat: the input's selected model if the
+ * session records it, else the model of the newest request that names one.
+ */
+export function extractSessionModel(session: Obj): string | undefined {
+  const input = isObj(session.inputState) ? session.inputState : undefined;
+  const fromSession =
+    (input && (modelRef(input.selectedModel) ?? modelRef(input.model) ?? modelRef(input.modelId))) ??
+    modelRef(session.selectedModel);
+  if (fromSession) {
+    return fromSession;
+  }
+  const requests = Array.isArray(session.requests) ? session.requests : [];
+  for (let i = requests.length - 1; i >= 0; i--) {
+    const r = requests[i];
+    if (!isObj(r)) {
+      continue;
+    }
+    const meta = isObj(r.result) && isObj(r.result.metadata) ? r.result.metadata : undefined;
+    const ref =
+      modelRef(r.modelId) ??
+      modelRef(r.selectedModel) ??
+      modelRef(r.model) ??
+      (isObj(r.agent) ? modelRef(r.agent.modelId) : undefined) ??
+      (meta ? modelRef(meta.modelId) ?? modelRef(meta.model) : undefined);
+    if (ref) {
+      return ref;
+    }
+  }
+  return undefined;
 }
 
 /** Returns the session object (something with a `requests` array) or undefined. */

@@ -1,9 +1,8 @@
 import * as vscode from 'vscode';
 import { truncate } from './modelChoice';
-import { friendlyError, noModelMarkdown, pickIncludedModel, PREFERRED_MODELS_SETTING, streamBtwAnswer } from '../btw/answer';
-import { describeBtwContext, gatherBtwContext, SPARSAM_PARTICIPANT_ID } from '../btw/context';
+import { friendlyError, noModelMarkdown, pickIncludedModel, PREFERRED_MODELS_SETTING } from './lm';
 
-const PARTICIPANT_ID = SPARSAM_PARTICIPANT_ID;
+const PARTICIPANT_ID = 'contingentWatcher.sparsam';
 const MAX_REF_CHARS = 8000;
 
 function systemPrompt(): string {
@@ -60,14 +59,9 @@ function historyMessages(context: vscode.ChatContext): vscode.LanguageModelChatM
   return out;
 }
 
-export function registerSparsam(context: vscode.ExtensionContext, log?: vscode.LogOutputChannel): vscode.Disposable {
+/** `_log` is accepted for compatibility with existing callers; unused. */
+export function registerSparsam(context: vscode.ExtensionContext, _log?: vscode.LogOutputChannel): vscode.Disposable {
   const handler: vscode.ChatRequestHandler = async (request, chatContext, response, token) => {
-    const btw = request.command === 'btw';
-    if (btw && !request.prompt.trim()) {
-      response.markdown(vscode.l10n.t('Type your side question after `/btw`.'));
-      return {};
-    }
-
     const pick = await pickIncludedModel();
     if (pick.kind === 'error') {
       response.markdown(pick.message);
@@ -90,36 +84,6 @@ export function registerSparsam(context: vscode.ExtensionContext, log?: vscode.L
       if (t) {
         refTexts.push(t);
       }
-    }
-
-    if (btw) {
-      // Same context and instruction as the btw panel, so both entry points behave identically.
-      const ctx = await gatherBtwContext(context, { log: log ? (m) => log.info(m) : undefined });
-      if (refTexts.length) {
-        ctx.references = refTexts;
-      }
-      const res = await streamBtwAnswer(
-        model,
-        request.prompt,
-        ctx,
-        (fragment) => response.markdown(fragment),
-        token,
-        vscode.l10n.t("@sparsam uses an included model so simple questions don't use premium requests"),
-      );
-      if (res.kind === 'error') {
-        response.markdown(res.message);
-      }
-      if (res.kind !== 'done') {
-        return {};
-      }
-      response.markdown(
-        '\n\n_' +
-          vscode.l10n.t('Context: {0}', describeBtwContext(ctx)) +
-          ' · ' +
-          vscode.l10n.t('Answered with {0} (included model) · no premium requests', model.name) +
-          '_',
-      );
-      return {};
     }
 
     const messages: vscode.LanguageModelChatMessage[] = [vscode.LanguageModelChatMessage.User(systemPrompt())];

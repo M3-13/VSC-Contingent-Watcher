@@ -36,8 +36,10 @@ export interface BtwChatContext extends ChatSnapshot {
 export interface BtwContext {
   chat?: BtwChatContext;
   editor?: EditorSnapshot;
-  /** Extra attached material (e.g. #file references in @sparsam), already formatted. */
+  /** Extra attached material (e.g. #file references), already formatted. */
   references?: string[];
+  /** Model selected in the chat, as recorded in the session (not sent to the model). */
+  chatModelId?: string;
 }
 
 /** Instruction for the model. English on purpose; the model answers in the user's language. */

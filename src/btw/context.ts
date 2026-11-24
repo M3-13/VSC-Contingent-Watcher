@@ -4,10 +4,8 @@
  * Never throws; missing parts are simply left out.
  */
 import * as vscode from 'vscode';
-import { parseChatSession } from './chatSessionParse';
+import { parseChatSessionInfo } from './chatSessionParse';
 import { BtwChatContext, BtwContext, ContextLabels, EditorDiagnostic, EditorSnapshot, describeContext } from './prompt';
-
-export const SPARSAM_PARTICIPANT_ID = 'contingentWatcher.sparsam';
 
 const CURSOR_RADIUS = 30;
 const MAX_EDITOR_CHARS = 8000;
@@ -32,14 +30,18 @@ export async function gatherBtwContext(ext: vscode.ExtensionContext, opts: Gathe
   const includeChat =
     opts.includeChat ?? vscode.workspace.getConfiguration('contingentWatcher').get<boolean>('btw.includeChat', true) !== false;
   const ctx: BtwContext = {};
-  if (includeChat) {
-    try {
-      ctx.chat = await readLatestChat(ext, log);
-    } catch (err) {
-      log(`btw: chat context unavailable (${err instanceof Error ? err.message : String(err)})`);
+  try {
+    // The session is always read for the chat's model; its content is only used with includeChat.
+    const latest = await readLatestChat(ext, log, includeChat);
+    ctx.chatModelId = latest.modelId;
+    if (includeChat) {
+      ctx.chat = latest.chat;
     }
-  } else {
-    log('btw: chat context disabled by contingentWatcher.btw.includeChat');
+  } catch (err) {
+    log(`btw: chat session unavailable (${err instanceof Error ? err.message : String(err)})`);
+  }
+  if (!includeChat) {
+    log('btw: chat content not used (contingentWatcher.btw.includeChat is off)');
   }
   if (opts.includeEditor !== false) {
     try {
@@ -114,17 +116,22 @@ async function listSessionFiles(dir: vscode.Uri): Promise<SessionFile[]> {
   return files.filter((f): f is SessionFile => !!f).sort((a, b) => b.mtime - a.mtime);
 }
 
-async function readLatestChat(ext: vscode.ExtensionContext, log: (m: string) => void): Promise<BtwChatContext | undefined> {
+async function readLatestChat(
+  ext: vscode.ExtensionContext,
+  log: (m: string) => void,
+  wantTurns: boolean,
+): Promise<{ chat?: BtwChatContext; modelId?: string }> {
   const files = (await Promise.all(sessionDirs(ext).map(listSessionFiles))).flat().sort((a, b) => b.mtime - a.mtime);
   if (files.length === 0) {
     log('btw: no local chat sessions found');
-    return undefined;
+    return {};
   }
   const now = Date.now();
+  const out: { chat?: BtwChatContext; modelId?: string } = {};
   for (const f of files.slice(0, SESSION_CANDIDATES)) {
     if (now - f.mtime > MAX_SESSION_AGE_MS) {
-      log(`btw: newest chat session ${f.name} is older than 24 h, not used`);
-      return undefined;
+      log(`btw: chat session ${f.name} is older than 24 h, not used`);
+      break;
     }
     if (f.size > MAX_SESSION_BYTES) {
       log(`btw: chat session ${f.name} is too large (${Math.round(f.size / 1048576)} MB), skipped`);
@@ -136,17 +143,25 @@ async function readLatestChat(ext: vscode.ExtensionContext, log: (m: string) => 
     } catch {
       continue;
     }
-    const snap = parseChatSession(text, { skipAgentIds: [SPARSAM_PARTICIPANT_ID], skipPrefixes: ['@sparsam'] });
-    if (snap) {
-      log(
-        `btw: chat context from ${f.name}: ${snap.turns.length} of ${snap.totalTurns} turns` +
-          (snap.truncated ? ' (shortened)' : ''),
-      );
-      return { ...snap, ageMinutes: Math.max(0, (now - f.mtime) / 60000) };
+    const info = parseChatSessionInfo(text);
+    if (!info) {
+      log(`btw: nothing usable in chat session ${f.name}`);
+      continue;
     }
-    log(`btw: no usable turns in chat session ${f.name}`);
+    if (!out.modelId && info.modelId) {
+      out.modelId = info.modelId;
+      log(`btw: chat model from ${f.name}: ${info.modelId}`);
+    }
+    if (wantTurns && !out.chat && info.snapshot) {
+      const snap = info.snapshot;
+      log(`btw: chat context from ${f.name}: ${snap.turns.length} of ${snap.totalTurns} turns` + (snap.truncated ? ' (shortened)' : ''));
+      out.chat = { ...snap, ageMinutes: Math.max(0, (now - f.mtime) / 60000) };
+    }
+    if (out.modelId && (out.chat || !wantTurns)) {
+      break;
+    }
   }
-  return undefined;
+  return out;
 }
 
 // ------------------------------------------------------------------ editor
