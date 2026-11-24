@@ -103,14 +103,17 @@ export class StatusBar implements vscode.Disposable {
       default:
         value = fmt(snap.remaining);
     }
-    item.text = `${[iconFor(cfg.statusBarIcon, fillLevel(snap.remaining, snap.entitlement)), value].filter(Boolean).join(' ')}${stale ? ' $(history)' : ''}`;
+    const severe = f.status === 'critical' || f.status === 'exhausted';
+    const warn = severe || f.status === 'ahead';
+    const custom = resolveColor(cfg.statusBarColor);
+    // With a custom colour the user's colour stays; warnings show as a symbol
+    // instead of the coloured background (which would override the colour).
+    const marker = warn && custom ? (severe ? '$(error)' : '$(warning)') : '';
+    const icon = iconFor(cfg.statusBarIcon, fillLevel(snap.remaining, snap.entitlement));
+    item.text = `${[marker, icon, value].filter(Boolean).join(' ')}${stale ? ' $(history)' : ''}`;
 
-    if (f.status === 'critical' || f.status === 'exhausted') {
-      item.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-      item.color = undefined; // keep the theme's readable warning foreground
-    } else if (f.status === 'ahead') {
-      item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-      item.color = undefined;
+    if (warn && !custom) {
+      item.backgroundColor = new vscode.ThemeColor(severe ? 'statusBarItem.errorBackground' : 'statusBarItem.warningBackground');
     }
     item.tooltip = this.tooltip(snap, f, cfg, stale);
   }

@@ -255,15 +255,6 @@
         }
       ]
     },
-    "menus": {
-      "view/title": [
-        {
-          "command": "contingentWatcher.refresh",
-          "when": "view == contingentWatcher.dashboard",
-          "group": "navigation"
-        }
-      ]
-    },
     "configuration": {
       "title": "Copilot Contingent Watcher",
       "properties": {

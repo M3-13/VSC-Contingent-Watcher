@@ -145,6 +145,23 @@ export interface DashboardModel {
     surplusHint: boolean;
     activityTracking: boolean;
     billingTokenSet: boolean;
+    refreshIntervalMinutes: number;
+    alignment: 'left' | 'right';
+    /** Optional API base URL override (empty = automatic). */
+    apiUrl: string;
+    /** Model families @sparsam and btw may use, in order. */
+    preferredModels: string[];
+    /** Include the current Copilot chat conversation as btw context. */
+    btwIncludeChat: boolean;
+    /**
+     * Copilot's own options, discovered at runtime from the installed Copilot
+     * extension (undefined = not available in this Copilot version).
+     */
+    copilotEagerness?: { value: string; options: string[] };
+    /** Completions for the language of the active editor. */
+    copilotLanguage?: { id: string; label: string; enabled: boolean };
+    /** Copilot offers a "snooze completions" command. */
+    copilotSnoozeAvailable: boolean;
   };
 }
 
@@ -163,7 +180,9 @@ export type DashboardCommand =
   | 'configureBillingToken'
   | 'clearBillingToken'
   | 'askSparsam'
-  | 'clearActivity';
+  | 'clearActivity'
+  | 'btw'
+  | 'snoozeCompletions';
 
 /** Settings the webview may change directly. */
 export type DashboardSettingKey =
@@ -181,7 +200,14 @@ export type DashboardSettingKey =
   | 'statusBarIcon'
   | 'statusBarColor'
   | 'surplusHint'
-  | 'activityTracking';
+  | 'activityTracking'
+  | 'refreshIntervalMinutes'
+  | 'alignment'
+  | 'apiUrl'
+  | 'preferredModels'
+  | 'btwIncludeChat'
+  | 'copilotEagerness'
+  | 'copilotLanguage';
 
 export type WebviewMessage =
   | { type: 'ready' }

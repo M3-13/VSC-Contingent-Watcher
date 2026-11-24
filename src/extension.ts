@@ -15,6 +15,7 @@ import { State } from './state';
 import { StatusBar, ViewState } from './statusBar';
 import { ProviderId } from './auth';
 import { ActivityTracker } from './activityTracker';
+import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
 import { registerSparsam } from './chat/sparsam';
 import { resolveColor } from './core/appearance';
@@ -39,11 +40,13 @@ const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   statusBarColor: 'statusBar.color',
   surplusHint: 'warnings.surplusHint',
   activityTracking: 'activity.enabled',
+  refreshIntervalMinutes: 'refreshIntervalMinutes',
+  alignment: 'statusBar.alignment',
+  apiUrl: 'auth.apiUrl',
+  preferredModels: 'chat.preferredModels',
+  btwIncludeChat: 'btw.includeChat',
 };
 
-function copilotInstalled(): boolean {
-  return !!(vscode.extensions.getExtension('GitHub.copilot') ?? vscode.extensions.getExtension('GitHub.copilot-chat'));
-}
 
 class Controller implements vscode.Disposable {
   private cfg: Config = readConfig();
@@ -56,6 +59,7 @@ class Controller implements vscode.Disposable {
   private inFlight: Promise<void> | undefined;
   readonly activity: ActivityTracker;
   readonly billing: BillingService;
+  readonly copilot = new CopilotOptions();
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -172,8 +176,9 @@ class Controller implements vscode.Disposable {
   model(): DashboardModel {
     const v = this.view;
     const data = v.kind === 'ok' ? v : v.kind === 'error' ? v.stale : undefined;
-    const copilot = vscode.workspace.getConfiguration('github.copilot');
-    const installed = copilotInstalled();
+    const copilot = this.copilot;
+    const installed = copilot.installed;
+    const own = vscode.workspace.getConfiguration(SECTION);
     const status = data?.forecast.status;
 
     const model: DashboardModel = {
@@ -200,8 +205,16 @@ class Controller implements vscode.Disposable {
         tipsEnabled: this.cfg.tipsEnabled,
         authProvider: vscode.workspace.getConfiguration(SECTION).get('auth.provider', 'auto'),
         snoozedUntil: this.state.snoozedUntil,
-        copilotCompletions: installed ? copilot.get<Record<string, boolean>>('enable')?.['*'] !== false : undefined,
-        copilotNextEdit: installed ? copilot.get<boolean>('nextEditSuggestions.enabled', false) : undefined,
+        copilotCompletions: installed ? copilot.completionsEnabled : undefined,
+        copilotNextEdit: installed ? copilot.nextEditEnabled : undefined,
+        copilotEagerness: installed ? copilot.eagerness : undefined,
+        copilotLanguage: installed ? copilot.language : undefined,
+        copilotSnoozeAvailable: installed && copilot.snoozeAvailable,
+        refreshIntervalMinutes: this.cfg.refreshIntervalMinutes,
+        alignment: this.cfg.alignment,
+        apiUrl: own.get<string>('auth.apiUrl', ''),
+        preferredModels: own.get<string[]>('chat.preferredModels', ['gpt-5-mini', 'gpt-4.1', 'gpt-4o']),
+        btwIncludeChat: own.get<boolean>('btw.includeChat', true),
         accent: this.cfg.accent,
         statusBarIcon: this.cfg.statusBarIcon,
         statusBarColor: this.cfg.statusBarColor,
@@ -342,6 +355,10 @@ class Controller implements vscode.Disposable {
         const ok = await vscode.window.showWarningMessage(vscode.l10n.t('Clear the recorded activity history?'), { modal: true }, yes);
         return ok === yes ? this.activity.clear() : undefined;
       }
+      case 'snoozeCompletions':
+        return this.copilot.snooze();
+      case 'btw':
+        return vscode.commands.executeCommand('contingentWatcher.btw');
       case 'openWalkthrough':
         return vscode.commands.executeCommand('workbench.action.openWalkthrough', `${this.context.extension.id}#${WALKTHROUGH}`, false);
     }
@@ -349,15 +366,15 @@ class Controller implements vscode.Disposable {
 
   async onDashboardSetting(key: DashboardSettingKey, value: unknown): Promise<void> {
     const target = vscode.ConfigurationTarget.Global;
-    if (key === 'copilotCompletions') {
-      const copilot = vscode.workspace.getConfiguration('github.copilot');
-      const current = copilot.get<Record<string, boolean>>('enable') ?? {};
-      await copilot.update('enable', { ...current, '*': value === true }, target);
-      return;
-    }
-    if (key === 'copilotNextEdit') {
-      await vscode.workspace.getConfiguration('github.copilot').update('nextEditSuggestions.enabled', value === true, target);
-      return;
+    switch (key) {
+      case 'copilotCompletions':
+        return this.copilot.setCompletions(value === true);
+      case 'copilotNextEdit':
+        return this.copilot.setNextEdit(value === true);
+      case 'copilotLanguage':
+        return this.copilot.setLanguage(value === true);
+      case 'copilotEagerness':
+        return this.copilot.setEagerness(value);
     }
     const cfgKey = SETTING_KEYS[key];
     if (!cfgKey) {
@@ -366,6 +383,14 @@ class Controller implements vscode.Disposable {
     let v = value;
     if (key === 'reserve') {
       v = Math.max(0, Number(value) || 0);
+    } else if (key === 'refreshIntervalMinutes') {
+      v = Math.min(120, Math.max(2, Number(value) || 10));
+    } else if (key === 'alignment') {
+      v = value === 'left' ? 'left' : 'right';
+    } else if (key === 'apiUrl') {
+      v = typeof value === 'string' ? value.trim() : '';
+    } else if (key === 'preferredModels') {
+      v = Array.isArray(value) ? [...new Set(value.map((x) => String(x).trim()).filter(Boolean))] : undefined;
     } else if (key === 'thresholds') {
       v = Array.isArray(value)
         ? [...new Set(value.map(Number).filter((n) => Number.isFinite(n) && n > 0 && n <= 100))].sort((a, b) => a - b)
@@ -413,11 +438,17 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration(SECTION)) {
         ctl.onConfigChanged();
-      } else if (e.affectsConfiguration('github.copilot') || e.affectsConfiguration('github-enterprise')) {
+      } else if (e.affectsConfiguration('github.copilot') || e.affectsConfiguration('github-enterprise') || e.affectsConfiguration('editor.inlineSuggest')) {
         ctl.render();
       }
     }),
     vscode.window.onDidChangeWindowState((s) => s.focused && ctl.onFocus()),
+    // The language toggle follows the active editor.
+    vscode.window.onDidChangeActiveTextEditor(() => ctl.dashboard.visible && ctl.render()),
+    vscode.extensions.onDidChange(() => {
+      ctl.copilot.discover();
+      ctl.render();
+    }),
     vscode.authentication.onDidChangeSessions((e) => e.provider.id.startsWith('github') && void ctl.refresh()),
   );
   ctl.start();
