@@ -286,5 +286,19 @@
   "Answered by a free included model, so it uses no premium requests.": "Antwortet mit einem kostenlosen inklusiven Modell und verbraucht daher keine Premium-Requests.",
   "Model": "Modell",
   "Same as chat": "Wie im Chat",
-  "Free models": "Gratis-Modelle"
+  "Free models": "Gratis-Modelle",
+  "Personal account, Copilot Business/Enterprise on github.com, Enterprise Managed Users": "Privater Account, Copilot Business/Enterprise auf github.com, Enterprise Managed Users",
+  "GitHub Enterprise Cloud with own domain": "GitHub Enterprise Cloud mit eigener Domain",
+  "Your company signs in at an address like company.ghe.com": "Deine Firma meldet sich unter einer Adresse wie firma.ghe.com an",
+  "GitHub Enterprise Server": "GitHub Enterprise Server",
+  "Your company runs its own GitHub server, e.g. github.company.com": "Deine Firma betreibt einen eigenen GitHub-Server, z. B. github.firma.com",
+  "Which GitHub account do you use Copilot with?": "Mit welchem GitHub-Account nutzt du Copilot?",
+  "Not sure? Check the address you use to sign in to GitHub in the browser.": "Unsicher? Schau, unter welcher Adresse du dich im Browser bei GitHub anmeldest.",
+  "Your GHE.com address": "Deine GHE.com-Adresse",
+  "Your GitHub Enterprise Server address": "Adresse deines GitHub Enterprise Servers",
+  "The address you open in the browser to use GitHub": "Die Adresse, die du im Browser für GitHub öffnest",
+  "Please enter an address like company.ghe.com": "Bitte gib eine Adresse wie firma.ghe.com ein",
+  "Try again": "Erneut versuchen",
+  "Sign-in did not work. The log shows which address was tried and what GitHub answered.": "Die Anmeldung hat nicht geklappt. Im Log siehst du, welche Adresse versucht wurde und was GitHub geantwortet hat.",
+  "Your Copilot seat is billed to your organization, so GitHub most likely shows per-model usage only to its admins.": "Deine Copilot-Lizenz wird über deine Organisation abgerechnet. Den Verbrauch pro Modell zeigt GitHub daher sehr wahrscheinlich nur deren Admins."
 }

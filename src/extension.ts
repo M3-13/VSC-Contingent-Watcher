@@ -15,6 +15,7 @@ import { State } from './state';
 import { StatusBar, ViewState } from './statusBar';
 import { ProviderId } from './auth';
 import { ActivityTracker } from './activityTracker';
+import { guidedSignIn } from './signIn';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
 import { BtwViewProvider, btwCommand } from './btw/btwView';
@@ -173,6 +174,29 @@ class Controller implements vscode.Disposable {
     this.render();
   }
 
+  /** Guided sign-in (account type, enterprise address), then interactive refresh. */
+  async signIn(): Promise<void> {
+    if (!(await guidedSignIn())) {
+      return;
+    }
+    this.cfg = readConfig();
+    await this.refresh(true);
+    if (this.view.kind === 'signedOut' || this.view.kind === 'error' || this.view.kind === 'noCopilot') {
+      const log = vscode.l10n.t('Show log');
+      const retry = vscode.l10n.t('Try again');
+      const choice = await vscode.window.showWarningMessage(
+        vscode.l10n.t('Sign-in did not work. The log shows which address was tried and what GitHub answered.'),
+        log,
+        retry,
+      );
+      if (choice === log) {
+        await vscode.commands.executeCommand('contingentWatcher.showLog');
+      } else if (choice === retry) {
+        await this.signIn();
+      }
+    }
+  }
+
   /** Builds the dashboard model from the current view state. */
   model(): DashboardModel {
     const v = this.view;
@@ -190,7 +214,7 @@ class Controller implements vscode.Disposable {
       locale: vscode.env.language,
       strings: dashboardStrings(),
       appearance: { accentColor: resolveColor(this.cfg.accent) },
-      models: this.modelsSection(),
+      models: this.modelsSection(data?.snap),
       review: this.reviewSection(data?.snap),
       activity: this.activitySection(),
       tips: TIPS.map((t) => ({ id: t.id, text: vscode.l10n.t(t.text), relevant: !!status && t.when.includes(status) })).sort(
@@ -266,8 +290,19 @@ class Controller implements vscode.Disposable {
     return d.toLocaleDateString(vscode.env.language, { month: 'long', year: 'numeric' });
   }
 
-  private modelsSection(): DashboardModel['models'] {
+  private modelsSection(snap: QuotaSnapshot | undefined): DashboardModel['models'] {
     const b = this.billing.state;
+    // Company seats are billed to the organization; the personal billing
+    // report then has no per-model data (only org admins can see it).
+    if (snap?.plan && /business|enterprise/i.test(snap.plan) && b.state !== 'ok') {
+      return {
+        state: 'error',
+        errorMessage: vscode.l10n.t(
+          'Your Copilot seat is billed to your organization, so GitHub most likely shows per-model usage only to its admins.',
+        ),
+        items: [],
+      };
+    }
     switch (b.state) {
       case 'ok':
         return { state: 'ok', items: b.items, periodLabel: this.monthLabel(b.period) };
@@ -329,7 +364,7 @@ class Controller implements vscode.Disposable {
       case 'refresh':
         return this.refresh();
       case 'signIn':
-        return this.refresh(true);
+        return this.signIn();
       case 'showLog':
         return vscode.commands.executeCommand('contingentWatcher.showLog');
       case 'openSettings':
@@ -430,7 +465,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
     vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.refresh()),
-    vscode.commands.registerCommand('contingentWatcher.signIn', () => ctl.refresh(true)),
+    vscode.commands.registerCommand('contingentWatcher.signIn', () => ctl.signIn()),
     vscode.commands.registerCommand('contingentWatcher.showDetails', openDashboard),
     vscode.commands.registerCommand('contingentWatcher.showTips', openDashboard),
     vscode.commands.registerCommand('contingentWatcher.openSettings', () =>

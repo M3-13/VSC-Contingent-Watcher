@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { apiBaseFor, resolveTargets } from './auth';
 import { ModelUsage, parseModelUsage } from './core/billing';
+import { githubWebBase } from './signIn';
 
 const SECRET_KEY = 'contingentWatcher.billingToken';
-const TOKEN_URL = 'https://github.com/settings/personal-access-tokens/new';
 const CACHE_MS = 30 * 60 * 1000;
 
 export type ModelUsageState =
@@ -57,7 +57,7 @@ export class BillingService {
       create,
     );
     if (choice === create) {
-      await vscode.env.openExternal(vscode.Uri.parse(TOKEN_URL));
+      await vscode.env.openExternal(vscode.Uri.parse(`${githubWebBase()}/settings/personal-access-tokens/new`));
     } else if (choice !== enter) {
       return;
     }
