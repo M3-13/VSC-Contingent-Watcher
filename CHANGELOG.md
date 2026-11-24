@@ -8,7 +8,7 @@
 - Streak endet, wenn das Kontingent leer ist
 - Geführte Anmeldung für GitHub Enterprise (GHE.com, Enterprise Server)
 
-- btw: Tastenkürzel öffnet einen eigenen Chat-Tab mit `@btw` (kein Warten auf laufende Agenten), mit Chat-Modell oder Gratis-Modell
+- btw: `@btw` im Chat, Antwort in einem Fenster daneben, mit Kontext der Haupt-Session; Chat-Modell oder Gratis-Modell
 - Copilot-Optionen im Dashboard: Eagerness, Vorschläge pro Sprache, Snooze
 - Eigene Statusleisten-Farbe bleibt auch bei Warnungen sichtbar
 

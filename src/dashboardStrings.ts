@@ -42,7 +42,6 @@ export function dashboardStrings(): Record<string, string> {
     btwOpenIn: vscode.l10n.t('Open btw in'),
     btwOpenWindow: vscode.l10n.t('Own window'),
     btwOpenSide: vscode.l10n.t('Beside editor'),
-    btwOpenTab: vscode.l10n.t('Tab'),
     btwModelInfoChat: vscode.l10n.t('Answered by the same model as your chat, so it costs what that model costs.'),
     btwModelInfoFree: vscode.l10n.t('Answered by a free included model, so it uses none of your allowance.'),
 

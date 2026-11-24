@@ -15,45 +15,12 @@ const MAX_DIAGNOSTICS = 20;
 const MAX_SESSION_BYTES = 64 * 1024 * 1024;
 /** Sessions not written for longer than this are not "what you're doing now". */
 const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000;
-/**
- * Read at most this many of the newest session files when looking for the working
- * session (newer @btw tabs or empty chats are skipped).
- */
+/** Read at most this many of the newest session files when looking for the working session. */
 const SESSION_CANDIDATES = 8;
 
 /** The @btw chat participant; its own turns are side questions, not part of the main conversation. */
 export const BTW_PARTICIPANT_ID = 'contingentWatcher.btw';
 const SKIP = { skipAgentIds: [BTW_PARTICIPANT_ID], skipPrefixes: ['@btw'] };
-
-const ORIGIN_KEY = 'contingentWatcher.btw.originSession';
-/** How long a btw chat keeps the context of the chat it was started from. */
-const ORIGIN_TTL_MS = 2 * 60 * 60 * 1000;
-
-interface OriginPin {
-  name: string;
-  at: number;
-}
-
-/**
- * Remembers the chat you are working in when the btw shortcut is pressed, so
- * the new btw chat uses exactly that chat as context (even with several chats).
- */
-export async function pinOriginSession(ext: vscode.ExtensionContext, log: (m: string) => void = () => undefined): Promise<void> {
-  try {
-    const found = await findWorkingSession(ext, log, undefined);
-    if (found) {
-      await ext.workspaceState.update(ORIGIN_KEY, { name: found.name, at: Date.now() } satisfies OriginPin);
-      log(`btw: started from chat session ${found.name}`);
-    }
-  } catch {
-    // best effort
-  }
-}
-
-function currentPin(ext: vscode.ExtensionContext): string | undefined {
-  const pin = ext.workspaceState.get<OriginPin>(ORIGIN_KEY);
-  return pin && Date.now() - pin.at < ORIGIN_TTL_MS ? pin.name : undefined;
-}
 
 export interface GatherOptions {
   /** Defaults to the `contingentWatcher.btw.includeChat` setting. */
@@ -154,8 +121,8 @@ async function listSessionFiles(dir: vscode.Uri): Promise<SessionFile[]> {
 }
 
 /**
- * Finds the working session: the most recently modified session file with turns
- * other than @btw side questions (so a fresh btw chat tab is skipped), and returns
+ * Finds the working session: the chat @btw was typed in, i.e. the most recently
+ * modified session file with turns other than @btw side questions, and returns
  * its recent turns and model.
  */
 async function readLatestChat(
@@ -163,7 +130,7 @@ async function readLatestChat(
   log: (m: string) => void,
   wantTurns: boolean,
 ): Promise<{ chat?: BtwChatContext; modelId?: string }> {
-  const found = await findWorkingSession(ext, log, currentPin(ext));
+  const found = await findWorkingSession(ext, log);
   if (!found) {
     return {};
   }
@@ -184,28 +151,22 @@ async function readLatestChat(
   };
 }
 
-/**
- * The working session: the pinned origin chat if it is still a working session,
- * otherwise the most recently modified session with turns besides @btw.
- */
+/** The most recently modified session with turns besides @btw (empty chats are skipped). */
 async function findWorkingSession(
   ext: vscode.ExtensionContext,
   log: (m: string) => void,
-  pinned: string | undefined,
 ): Promise<{ name: string; file: SessionFile; info?: ReturnType<typeof parseChatSessionInfo>; fallbackModel?: string } | undefined> {
-  const all = (await Promise.all(sessionDirs(ext).map(listSessionFiles))).flat().sort((a, b) => b.mtime - a.mtime);
-  // The pinned origin chat goes first; the rest by recency.
-  const files = pinned ? [...all.filter((f) => f.name === pinned), ...all.filter((f) => f.name !== pinned)] : all;
+  const files = (await Promise.all(sessionDirs(ext).map(listSessionFiles))).flat().sort((a, b) => b.mtime - a.mtime);
   if (files.length === 0) {
     log('btw: no local chat sessions found');
     return undefined;
   }
   const now = Date.now();
   let fallbackModel: string | undefined;
-  for (const f of files.slice(0, SESSION_CANDIDATES + (pinned ? 1 : 0))) {
-    if (now - f.mtime > MAX_SESSION_AGE_MS && f.name !== pinned) {
+  for (const f of files.slice(0, SESSION_CANDIDATES)) {
+    if (now - f.mtime > MAX_SESSION_AGE_MS) {
       log(`btw: chat session ${f.name} is older than 24 h, not used`);
-      continue;
+      break;
     }
     if (f.size > MAX_SESSION_BYTES) {
       log(`btw: chat session ${f.name} is too large (${Math.round(f.size / 1048576)} MB), skipped`);

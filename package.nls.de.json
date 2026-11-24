@@ -50,7 +50,7 @@
   "cfg.surplusHint": "In der letzten Monatswoche Bescheid geben, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.",
   "cfg.activity": "Aktive Editor-Zeit und Verbrauch pro Git-Branch für den Verlauf aufzeichnen. Bleibt auf diesem Rechner.",
   "cfg.preferredModels": "Kostenlose (inklusive, 0x) Modellfamilien, die btw im Modus *Kostenloses Modell* nutzen darf, in Reihenfolge (Präfix-Treffer). Ist keine verfügbar, antwortet btw nicht, statt auf ein Premium-Modell auszuweichen.",
-  "cmd.btw": "Nebenfrage in neuem Chat-Tab stellen (@btw)",
+  "cmd.btw": "Nebenfrage stellen (@btw)",
   "cfg.btwIncludeChat": "Nutze einen Schnappschuss deines letzten Copilot-Chats (aus dem lokalen Chat-Speicher von VS Code) als Kontext für btw-Nebenfragen. Wenn aus, wird nur der Editor verwendet.",
   "cfg.btwModel": "Welches Modell btw-Nebenfragen beantwortet.",
   "cfg.btwModel.chat": "Das im Chat gewählte Modell (Premium-Modelle verbrauchen Premium-Requests).",
@@ -60,8 +60,8 @@
   "cfg.unit.credits": "Immer AI-Credits bevorzugen",
   "cfg.unit.requests": "Immer Premium-Requests bevorzugen",
   "chat.btw.description": "Stell eine kurze Nebenfrage mit dem Kontext deines Chats",
-  "cfg.btwOpenIn": "Wo das btw-Tastenkürzel seinen Chat öffnet.",
-  "cfg.btwOpenIn.window": "Eigenes schwebendes Fenster, das neben deiner Arbeit offen bleibt",
-  "cfg.btwOpenIn.side": "Geteilt rechts neben dem Editor",
-  "cfg.btwOpenIn.tab": "Normaler Editor-Tab"
+  "cfg.btwOpenIn": "Wo sich das btw-Fenster mit den Antworten öffnet.",
+  "cfg.btwOpenIn.window": "In einem eigenen, schwebenden Fenster",
+  "cfg.btwOpenIn.side": "Neben dem Editor in diesem Fenster",
+  "cmd.btwShow": "btw-Fenster anzeigen"
 }

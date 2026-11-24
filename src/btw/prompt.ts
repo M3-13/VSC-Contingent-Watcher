@@ -190,6 +190,12 @@ export function chatFooter(segments: readonly (string | undefined)[]): string {
   return parts.length ? `_${parts.map(escapeMarkdown).join(' · ')}_` : '';
 }
 
+/** The single line @btw writes into the chat, e.g. "↗ _btw: answer shown in the btw window_". */
+export function chatNoteLine(text: string): string {
+  const t = text.replace(/\s+/g, ' ').trim();
+  return t ? `↗ _${t.replace(/[\\`*_]/g, (c) => '\\' + c)}_` : '';
+}
+
 /** First user message: instruction plus context. */
 export function buildInstructionMessage(ctx: BtwContext): string {
   const block = buildContextBlock(ctx);

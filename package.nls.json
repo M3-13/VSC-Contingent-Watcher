@@ -50,7 +50,7 @@
   "cfg.surplusHint": "In the last week of the month, tell me if part of my allowance will likely expire unused (\"use it or lose it\").",
   "cfg.activity": "Record active editor time and usage per git branch for the history view. Stays on this computer.",
   "cfg.preferredModels": "Free (included, 0x) model families btw may use in *Free model* mode, in order of preference (prefix match). If none is available, btw does not answer rather than falling back to a premium model.",
-  "cmd.btw": "Ask a Side Question in a New Chat Tab (@btw)",
+  "cmd.btw": "Ask a Side Question (@btw)",
   "cfg.btwIncludeChat": "Use a snapshot of your most recent Copilot chat (read from VS Code's local chat storage) as context for btw side questions. When off, only the editor is used.",
   "cfg.btwModel": "Which model answers btw side questions.",
   "cfg.btwModel.chat": "The model selected in the chat (premium models use premium requests).",
@@ -60,8 +60,8 @@
   "cfg.unit.credits": "Always prefer AI credits",
   "cfg.unit.requests": "Always prefer premium requests",
   "chat.btw.description": "Ask a quick side question with your chat's context",
-  "cfg.btwOpenIn": "Where the btw shortcut opens its chat.",
-  "cfg.btwOpenIn.window": "Separate floating window that stays open next to your work",
-  "cfg.btwOpenIn.side": "Split to the right of the editor",
-  "cfg.btwOpenIn.tab": "Normal editor tab"
+  "cfg.btwOpenIn": "Where the btw window with the answers opens.",
+  "cfg.btwOpenIn.window": "Its own floating window",
+  "cfg.btwOpenIn.side": "Beside the editor in this window",
+  "cmd.btwShow": "Show btw Window"
 }

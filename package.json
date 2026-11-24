@@ -218,6 +218,11 @@
         "command": "contingentWatcher.btw",
         "title": "%cmd.btw%",
         "category": "Copilot Contingent"
+      },
+      {
+        "command": "contingentWatcher.btw.show",
+        "title": "%cmd.btwShow%",
+        "category": "Copilot Contingent"
       }
     ],
     "chatParticipants": [
@@ -455,16 +460,14 @@
         "contingentWatcher.btw.openIn": {
           "type": "string",
           "enum": [
-            "window",
             "side",
-            "tab"
+            "window"
           ],
           "enumDescriptions": [
-            "%cfg.btwOpenIn.window%",
             "%cfg.btwOpenIn.side%",
-            "%cfg.btwOpenIn.tab%"
+            "%cfg.btwOpenIn.window%"
           ],
-          "default": "window",
+          "default": "side",
           "markdownDescription": "%cfg.btwOpenIn%"
         }
       }

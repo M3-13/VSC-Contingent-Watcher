@@ -92,3 +92,10 @@ test('chatFooter: italic, escaped, skips empty parts', async () => {
   // No raw underscore can end the italics early.
   assert.doesNotMatch(chatFooter(['Context: editor selection in src/my_mod.ts']).slice(1, -1), /(^|[^\\])_/);
 });
+
+test('chatNoteLine: one italic line, escaped, multi-line collapsed', async () => {
+  const { chatNoteLine } = await import('../btw/prompt');
+  assert.equal(chatNoteLine('btw: answer shown in the btw window'), '↗ _btw: answer shown in the btw window_');
+  assert.equal(chatNoteLine('failed: my_var `x`\n  *bad*'), '↗ _failed: my\\_var \\`x\\` \\*bad\\*_');
+  assert.equal(chatNoteLine('   '), '');
+});

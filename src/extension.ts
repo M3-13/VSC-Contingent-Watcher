@@ -18,8 +18,7 @@ import { ActivityTracker } from './activityTracker';
 import { guidedSignIn } from './signIn';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
-import { openBtwChatCommand } from './chat/openBtwChat';
-import { registerBtwParticipant } from './chat/btwParticipant';
+import { prefillBtwInChat, registerBtwParticipant, showBtwPanel } from './chat/btwParticipant';
 import { resolveColor } from './core/appearance';
 import { expectedSurplus } from './core/surplus';
 
@@ -250,7 +249,7 @@ class Controller implements vscode.Disposable {
         preferredModels: own.get<string[]>('chat.preferredModels', ['gpt-5-mini', 'gpt-4.1', 'gpt-4o']),
         btwIncludeChat: own.get<boolean>('btw.includeChat', true),
         btwModel: own.get<string>('btw.model', 'chat') === 'included' ? 'included' : 'chat',
-        btwOpenIn: (['side', 'tab'] as const).find((v) => v === own.get<string>('btw.openIn')) ?? 'window',
+        btwOpenIn: own.get<string>('btw.openIn', 'side') === 'window' ? 'window' : 'side',
         unit: (['credits', 'requests'] as const).find((u) => u === own.get<string>('unit')) ?? 'auto',
         accent: this.cfg.accent,
         statusBarIcon: this.cfg.statusBarIcon,
@@ -443,7 +442,7 @@ class Controller implements vscode.Disposable {
     } else if (key === 'unit') {
       v = value === 'credits' || value === 'requests' ? value : 'auto';
     } else if (key === 'btwOpenIn') {
-      v = value === 'side' || value === 'tab' ? value : 'window';
+      v = value === 'window' ? 'window' : 'side';
     } else if (key === 'btwModel') {
       v = value === 'included' ? 'included' : 'chat';
     } else if (key === 'preferredModels') {
@@ -477,7 +476,8 @@ export function activate(context: vscode.ExtensionContext): void {
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
-    vscode.commands.registerCommand('contingentWatcher.btw', () => openBtwChatCommand(context, log)),
+    vscode.commands.registerCommand('contingentWatcher.btw', () => prefillBtwInChat()),
+    vscode.commands.registerCommand('contingentWatcher.btw.show', () => showBtwPanel()),
     registerBtwParticipant(context, log),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),

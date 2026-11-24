@@ -1020,11 +1020,10 @@
       )}<span class="row-hint">${t(freeModels ? 'btwModelInfoFree' : 'btwModelInfoChat')}</span></div>
       <div class="field"><span class="field-label" id="lbl-btwopen">${t('btwOpenIn')}</span>${segmented(
         'btwOpenIn',
-        s.btwOpenIn || 'window',
+        s.btwOpenIn === 'window' ? 'window' : 'side',
         [
-          ['window', t('btwOpenWindow')],
           ['side', t('btwOpenSide')],
-          ['tab', t('btwOpenTab')],
+          ['window', t('btwOpenWindow')],
         ],
         'lbl-btwopen',
       )}</div>
