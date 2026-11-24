@@ -346,7 +346,6 @@
   "Open btw in": "btw öffnen in",
   "Own window": "Eigenem Fenster",
   "Beside editor": "Neben dem Editor",
-  "Ask with @btw in the chat": "Frag mit @btw im Chat",
   "Remove all side questions": "Alle Nebenfragen entfernen",
   "Stop": "Stopp",
   "Copy": "Kopieren",
@@ -358,11 +357,17 @@
   "Stopped.": "Gestoppt.",
   "Answer ready": "Antwort fertig",
   "Question": "Frage",
-  "Answers to your side questions appear here.": "Hier erscheinen die Antworten auf deine Nebenfragen.",
-  "Type @btw and your question in the chat. It is answered with the context of your chat and editor, without being mixed into your main task.": "Tipp im Chat @btw und deine Frage. Sie wird mit dem Kontext deines Chats und Editors beantwortet, ohne sich mit deiner Hauptaufgabe zu vermischen.",
   "Show btw window": "btw-Fenster anzeigen",
   "Answering in the btw window…": "Antwort im btw-Fenster…",
   "No free model is available, so btw did not answer.": "Kein kostenloses Modell verfügbar, daher hat btw nicht geantwortet.",
   "btw: answer shown in the btw window": "btw: Antwort im btw-Fenster",
-  "Where the answer window opens": "Wo das Antwortfenster aufgeht"
+  "Where the answer window opens": "Wo das Antwortfenster aufgeht",
+  "Side questions": "Nebenfragen",
+  "Ask a side question… (works while the agent is busy)": "Stell eine Nebenfrage… (geht auch, während der Agent arbeitet)",
+  "Side question": "Nebenfrage",
+  "Enter to send · Shift+Enter for a new line": "Enter zum Senden · Umschalt+Enter für neue Zeile",
+  "Send": "Senden",
+  "Type here (works while the agent is busy) or use @btw in the chat.": "Tipp hier (geht auch, während der Agent arbeitet) oder nutze @btw im Chat.",
+  "Answered with the context of your chat and editor, without being mixed into your main task.": "Beantwortet mit dem Kontext deines Chats und Editors, ohne sich mit deiner Hauptaufgabe zu vermischen.",
+  "About the selection: ": "Zur Auswahl: "
 }

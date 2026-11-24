@@ -324,6 +324,73 @@ button { font: inherit; color: inherit; }
   .actions .tool { padding: 0 5px; }
 }
 
+/* ------------------------------------------------------------ composer */
+
+.composer {
+  flex: none;
+  padding: 8px 14px 10px;
+  background: var(--bg);
+}
+.composer > * { max-width: var(--maxw); margin-left: auto; margin-right: auto; }
+.box {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  padding: 4px 4px 4px 10px;
+  border: 1px solid var(--vscode-input-border, var(--card-border));
+  border-radius: var(--radius);
+  background: var(--vscode-input-background);
+}
+.box:focus-within { border-color: var(--vscode-focusBorder); }
+.box textarea {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 22px;
+  max-height: 140px;
+  margin: 2px 0;
+  padding: 1px 0;
+  border: 0;
+  resize: none;
+  background: transparent;
+  color: var(--vscode-input-foreground, var(--fg));
+  font: inherit;
+  line-height: 20px;
+}
+.box textarea:focus-visible { outline: none; }
+.box textarea::placeholder { color: var(--vscode-input-placeholderForeground, var(--muted)); }
+.send {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  padding: 0;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  cursor: pointer;
+}
+.send:hover { background: var(--vscode-button-hoverBackground); }
+.send:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  opacity: 0.6;
+  cursor: default;
+}
+.send .i { width: 15px; height: 15px; }
+/* Accessible description of the input only (Enter / Shift+Enter is the usual chat behaviour). */
+.hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.box textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
 /* ------------------------------------------------------------ high contrast */
 
 body.vscode-high-contrast .card,

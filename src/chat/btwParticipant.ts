@@ -10,12 +10,11 @@
  * `contingentWatcher.chat.preferredModels`, never a premium fallback.
  */
 import * as vscode from 'vscode';
-import { streamBtwAnswer } from '../btw/answer';
 import { BtwAnswersPanel } from '../btw/answersPanel';
-import { BTW_PARTICIPANT_ID, describeBtwContext, gatherBtwContext } from '../btw/context';
-import { BtwModelSource, btwMode, modelSourceLabel, resolveBtwModel } from '../btw/model';
+import { BTW_PARTICIPANT_ID } from '../btw/context';
 import { chatNoteLine } from '../btw/prompt';
-import { noModelMarkdown, pickIncludedModel, PREFERRED_MODELS_SETTING } from './lm';
+import { runBtwQuestion } from '../btw/run';
+import { PREFERRED_MODELS_SETTING } from './lm';
 import { truncate } from './modelChoice';
 
 const MAX_REF_CHARS = 8000;
@@ -30,6 +29,16 @@ export async function showBtwPanel(): Promise<void> {
   await answers?.show();
 }
 
+/**
+ * Shortcut: opens the btw window and focuses its input (works while an agent is
+ * busy in the chat). With an editor selection, prefills "About the selection: ".
+ */
+export async function openBtwInput(): Promise<void> {
+  const ed = vscode.window.activeTextEditor;
+  const prefill = ed && !ed.selection.isEmpty ? vscode.l10n.t('About the selection: ') : undefined;
+  await answers?.show({ focusInput: true, prefill });
+}
+
 /** Puts `@btw ` into the current chat's input (no new session). */
 export async function prefillBtwInChat(): Promise<void> {
   await vscode.commands.executeCommand('workbench.action.chat.open', { query: '@btw ', isPartialQuery: true });
@@ -38,6 +47,10 @@ export async function prefillBtwInChat(): Promise<void> {
 export function registerBtwParticipant(context: vscode.ExtensionContext, log: vscode.LogOutputChannel): vscode.Disposable {
   const panel = new BtwAnswersPanel(context, log);
   answers = panel;
+  // Questions typed into the btw window itself: answered right away, independent of the chat.
+  panel.onAsk = (question) => {
+    void runBtwQuestion(context, log, panel.startCard(question), question);
+  };
 
   const handler: vscode.ChatRequestHandler = async (request, _chatContext, response, token) => {
     const question = request.prompt.trim();
@@ -48,91 +61,34 @@ export function registerBtwParticipant(context: vscode.ExtensionContext, log: vs
 
     const card = panel.startCard(question);
     const stop = token.onCancellationRequested(() => card.cancel());
-    const showButton = () =>
-      response.button({ title: vscode.l10n.t('Show btw window'), command: SHOW_BTW_COMMAND });
-    /** One short line in the chat; the answer itself is in the btw window. */
-    const chatLine = (text: string) => response.markdown(chatNoteLine(text));
-
     try {
       await panel.show();
       response.progress(vscode.l10n.t('Answering in the btw window…'));
-
-      const ctx = await gatherBtwContext(context, { log: (m) => log.info(m) });
-      const refs = await readReferences(request.references);
-      if (refs.length) {
-        ctx.references = refs;
-      }
-      card.update({ context: describeBtwContext(ctx) });
-      if (card.token.isCancellationRequested) {
-        card.finish('cancelled');
-        return {};
-      }
-
-      // Pick the model.
-      let model: vscode.LanguageModelChat | undefined;
-      let source: BtwModelSource = 'chat';
-      if (btwMode() === 'included') {
-        const pick = await pickIncludedModel();
-        if (pick.kind === 'error') {
-          card.finish('error', pick.message);
-          chatLine(pick.message);
-          showButton();
+      const out = await runBtwQuestion(context, log, card, question, {
+        // `request.model` is the model selected in the chat picker (VS Code 1.95+).
+        chatModel: (request as { model?: vscode.LanguageModelChat }).model,
+        references: await readReferences(request.references),
+      });
+      // One short line in the chat; the answer itself is in the btw window.
+      switch (out.kind) {
+        case 'cancelled':
           return {};
-        }
-        if (pick.kind === 'none') {
-          card.update({ fix: 'openSettings' });
-          card.setAnswer(noModelMarkdown(pick.families));
-          card.finish('noModel');
-          chatLine(vscode.l10n.t('No free model is available, so btw did not answer.'));
+        case 'done':
+          response.markdown(chatNoteLine(vscode.l10n.t('btw: answer shown in the btw window')));
+          break;
+        case 'noModel':
+          response.markdown(chatNoteLine(vscode.l10n.t('No free model is available, so btw did not answer.')));
           response.button({
             title: vscode.l10n.t('Open settings'),
             command: 'workbench.action.openSettings',
             arguments: [PREFERRED_MODELS_SETTING],
           });
-          return {};
-        }
-        model = pick.model;
-        source = 'included';
-      } else {
-        // `request.model` is the model selected in the chat picker (VS Code 1.95+).
-        model = (request as { model?: vscode.LanguageModelChat }).model;
-        if (!model) {
-          const pick = await resolveBtwModel(context, ctx.chatModelId, (m) => log.info(m));
-          if (pick.kind !== 'ok') {
-            const msg =
-              pick.kind === 'error' ? pick.message : vscode.l10n.t('No model chosen, so btw did not answer. Choose a model and try again.');
-            card.finish('error', msg);
-            chatLine(msg);
-            return {};
-          }
-          model = pick.model;
-          source = pick.source;
-        }
+          break;
+        case 'error':
+          response.markdown(chatNoteLine(out.message));
+          break;
       }
-
-      card.update({ model: model.name, modelNote: modelSourceLabel(source), status: 'streaming' });
-      log.info(`btw: asking ${model.name} (${model.family}, ${source}) · context: ${describeBtwContext(ctx)}`);
-      const res = await streamBtwAnswer(model, question, ctx, (fragment) => card.append(fragment), card.token);
-      if (res.kind === 'cancelled') {
-        card.finish('cancelled');
-        return {};
-      }
-      if (res.kind === 'error') {
-        log.warn(`btw: ${res.message}`);
-        card.finish('error', res.message);
-        chatLine(res.message);
-        showButton();
-        return {};
-      }
-      card.finish('done');
-      chatLine(vscode.l10n.t('btw: answer shown in the btw window'));
-      showButton();
-      return {};
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      log.error(`btw: ${msg}`);
-      card.finish('error', msg);
-      chatLine(msg);
+      response.button({ title: vscode.l10n.t('Show btw window'), command: SHOW_BTW_COMMAND });
       return {};
     } finally {
       stop.dispose();

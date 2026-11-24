@@ -1,6 +1,7 @@
 // btw answers panel. Plain JS, no build step.
 // Side questions are asked with @btw in Copilot Chat; their answers stream here.
-// State lives in the extension (session only); nothing is persisted.
+// Questions can also be typed into the window's own input (never waits for the chat).
+// State lives in the extension (session only); only the draft is kept via setState.
 // @ts-check
 (function () {
   'use strict';
@@ -18,6 +19,23 @@
   /** @type {HTMLElement} */ let list;
   /** @type {HTMLElement} */ let scroller;
   /** @type {HTMLElement} */ let live;
+  /** @type {HTMLTextAreaElement} */ let input;
+
+  const saved = safe(() => vscode.getState()) || {};
+  let draft = typeof saved.draft === 'string' ? saved.draft : '';
+
+  /** @template T @param {() => T} fn @returns {T | undefined} */
+  function safe(fn) {
+    try {
+      return fn();
+    } catch {
+      return undefined;
+    }
+  }
+
+  function persist() {
+    safe(() => vscode.setState({ draft }));
+  }
   /** @type {Set<string>} */
   const dirty = new Set();
   let frame = 0;
@@ -196,6 +214,14 @@
         <button type="button" class="tool" id="clear" title="${t('clearTitle')}">${icon.clear}<span>${t('clear')}</span></button>
       </header>
       <div class="scroller" id="scroller"><div class="list" id="list"></div></div>
+      <form class="composer" id="composer" novalidate>
+        <div class="box">
+          <label class="sr-only" for="input">${t('inputLabel')}</label>
+          <textarea id="input" rows="1" placeholder="${t('placeholder')}" aria-describedby="hint" spellcheck="true"></textarea>
+          <span class="hint" id="hint">${t('hint')}</span>
+          <button type="submit" class="send" id="send" title="${t('send')}" aria-label="${t('send')}">${icon.send}</button>
+        </div>
+      </form>
       <div class="sr-only" id="live" aria-live="polite"></div>`;
     app.removeAttribute('aria-busy');
     list = /** @type {HTMLElement} */ (document.getElementById('list'));
@@ -203,6 +229,74 @@
     live = /** @type {HTMLElement} */ (document.getElementById('live'));
     list.addEventListener('click', onListClick);
     document.getElementById('clear')?.addEventListener('click', () => vscode.postMessage({ type: 'clear' }));
+
+    input = /** @type {HTMLTextAreaElement} */ (document.getElementById('input'));
+    input.value = draft;
+    autosize();
+    updateSend();
+    document.getElementById('composer')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      send();
+    });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && !e.altKey && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        send();
+      } else if (e.key === 'Escape') {
+        const run = [...cards].reverse().find(busyOf);
+        if (run) {
+          e.preventDefault();
+          vscode.postMessage({ type: 'cancel', id: run.id });
+        }
+      }
+    });
+    input.addEventListener('input', () => {
+      draft = input.value;
+      persist();
+      autosize();
+      updateSend();
+    });
+  }
+
+  function autosize() {
+    // Empty: one line (a long placeholder must not grow the field).
+    input.style.height = '';
+    if (input.value) {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+    }
+  }
+
+  function updateSend() {
+    document.getElementById('send')?.toggleAttribute('disabled', !input.value.trim());
+    document.body.classList.toggle('has-text', input.value.length > 0);
+  }
+
+  function send() {
+    const q = input.value.trim();
+    if (!q) {
+      return;
+    }
+    vscode.postMessage({ type: 'ask', question: q });
+    input.value = '';
+    draft = '';
+    persist();
+    autosize();
+    updateSend();
+  }
+
+  /** @param {string} [prefill] */
+  function focusInput(prefill) {
+    if (typeof prefill === 'string' && prefill) {
+      input.value = prefill;
+      draft = prefill;
+      persist();
+      autosize();
+      updateSend();
+    }
+    input.focus();
+    const end = input.value.length;
+    input.setSelectionRange(end, end);
   }
 
   function renderEmpty() {
@@ -427,6 +521,14 @@
           build();
         }
         renderAll();
+        if (msg.focus) {
+          focusInput(msg.focus.prefill);
+        }
+        return;
+      case 'focus':
+        if (built) {
+          focusInput(msg.prefill);
+        }
         return;
       case 'card': {
         const i = cards.findIndex((c) => c.id === msg.card.id);
@@ -462,6 +564,7 @@
         cards = [];
         if (built) {
           renderAll();
+          input.focus();
         }
         return;
     }

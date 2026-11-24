@@ -50,7 +50,7 @@
   "cfg.surplusHint": "In the last week of the month, tell me if part of my allowance will likely expire unused (\"use it or lose it\").",
   "cfg.activity": "Record active editor time and usage per git branch for the history view. Stays on this computer.",
   "cfg.preferredModels": "Free (included, 0x) model families btw may use in *Free model* mode, in order of preference (prefix match). If none is available, btw does not answer rather than falling back to a premium model.",
-  "cmd.btw": "Ask a Side Question (@btw)",
+  "cmd.btw": "Ask a Side Question (btw)",
   "cfg.btwIncludeChat": "Use a snapshot of your most recent Copilot chat (read from VS Code's local chat storage) as context for btw side questions. When off, only the editor is used.",
   "cfg.btwModel": "Which model answers btw side questions.",
   "cfg.btwModel.chat": "The model selected in the chat (premium models use premium requests).",

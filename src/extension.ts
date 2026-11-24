@@ -18,7 +18,7 @@ import { ActivityTracker } from './activityTracker';
 import { guidedSignIn } from './signIn';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
-import { prefillBtwInChat, registerBtwParticipant, showBtwPanel } from './chat/btwParticipant';
+import { openBtwInput, registerBtwParticipant, showBtwPanel } from './chat/btwParticipant';
 import { resolveColor } from './core/appearance';
 import { expectedSurplus } from './core/surplus';
 
@@ -476,7 +476,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
-    vscode.commands.registerCommand('contingentWatcher.btw', () => prefillBtwInChat()),
+    vscode.commands.registerCommand('contingentWatcher.btw', () => openBtwInput()),
     vscode.commands.registerCommand('contingentWatcher.btw.show', () => showBtwPanel()),
     registerBtwParticipant(context, log),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),

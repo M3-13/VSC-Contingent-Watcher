@@ -41,7 +41,8 @@ export interface BtwCardHandle {
 }
 
 type ToWebview =
-  | { type: 'init'; strings: Record<string, string>; cards: BtwCard[] }
+  | { type: 'init'; strings: Record<string, string>; cards: BtwCard[]; focus?: { prefill?: string } }
+  | { type: 'focus'; prefill?: string }
   | { type: 'card'; card: BtwCard }
   /** `at`: offset in the answer where `text` starts (lets the webview ignore text it already has). */
   | { type: 'delta'; id: string; text: string; at: number }
@@ -49,6 +50,7 @@ type ToWebview =
 
 type FromWebview =
   | { type: 'ready' }
+  | { type: 'ask'; question: string }
   | { type: 'copy'; text: string }
   | { type: 'cancel'; id: string }
   | { type: 'clear' }
@@ -66,6 +68,9 @@ export class BtwAnswersPanel implements vscode.Disposable {
   private readonly running = new Map<string, vscode.CancellationTokenSource>();
   private readonly mediaRoot: vscode.Uri;
   private seq = 0;
+  private pendingFocus?: { prefill?: string };
+  /** Called for questions typed into the window's own input. */
+  onAsk?: (question: string) => void;
 
   constructor(
     context: vscode.ExtensionContext,
@@ -75,21 +80,27 @@ export class BtwAnswersPanel implements vscode.Disposable {
   }
 
   /**
-   * Shows the window without taking focus from the chat. Created beside the
-   * editor, or (setting `contingentWatcher.btw.openIn` = "window") moved into its
-   * own floating window the first time.
+   * Shows the window. Created beside the editor, or (setting
+   * `contingentWatcher.btw.openIn` = "window") moved into its own floating window
+   * the first time. By default focus stays in the chat; with `focusInput` the
+   * window's input gets the focus (optionally prefilled).
    */
-  async show(): Promise<void> {
+  async show(opts: { focusInput?: boolean; prefill?: string } = {}): Promise<void> {
+    const focus = opts.focusInput ? { prefill: opts.prefill } : undefined;
     if (this.panel) {
-      this.panel.reveal(undefined, true);
+      this.panel.reveal(undefined, !focus);
+      if (focus) {
+        this.focusInput(focus);
+      }
       return;
     }
     const openIn = vscode.workspace.getConfiguration('contingentWatcher').get<string>('btw.openIn', 'side');
     const ownWindow = openIn === 'window';
+    this.pendingFocus = focus;
     const panel = vscode.window.createWebviewPanel(
       BtwAnswersPanel.viewType,
       vscode.l10n.t('btw'),
-      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: !ownWindow },
+      { viewColumn: vscode.ViewColumn.Beside, preserveFocus: !ownWindow && !focus },
       { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [this.mediaRoot] },
     );
     this.panel = panel;
@@ -104,16 +115,27 @@ export class BtwAnswersPanel implements vscode.Disposable {
       }
     });
     if (ownWindow) {
-      await this.moveToOwnWindow();
+      await this.moveToOwnWindow(!focus);
     }
   }
 
-  private async moveToOwnWindow(): Promise<void> {
+  private focusInput(focus: { prefill?: string }): void {
+    if (this.panel && this.ready) {
+      this.post({ type: 'focus', prefill: focus.prefill });
+    } else {
+      this.pendingFocus = focus;
+    }
+  }
+
+  private async moveToOwnWindow(refocusChat: boolean): Promise<void> {
     try {
       await vscode.commands.executeCommand('workbench.action.moveEditorToNewWindow');
       this.log.info('btw: answers window moved to its own window');
     } catch (err) {
       this.log.warn(`btw: could not move the answers window (${err instanceof Error ? err.message : String(err)})`);
+    }
+    if (!refocusChat) {
+      return;
     }
     try {
       const commands = await vscode.commands.getCommands(true);
@@ -216,7 +238,13 @@ export class BtwAnswersPanel implements vscode.Disposable {
       switch (msg?.type) {
         case 'ready':
           this.ready = true;
-          this.post({ type: 'init', strings: webviewStrings(), cards: this.cards });
+          this.post({ type: 'init', strings: webviewStrings(), cards: this.cards, focus: this.pendingFocus });
+          this.pendingFocus = undefined;
+          return;
+        case 'ask':
+          if (typeof msg.question === 'string' && msg.question.trim()) {
+            this.onAsk?.(msg.question.trim().slice(0, 4000));
+          }
           return;
         case 'copy':
           if (typeof msg.text === 'string') {
@@ -279,7 +307,11 @@ export class BtwAnswersPanel implements vscode.Disposable {
 /** UI strings for the webview (keys are referenced by media/btw/btw.js). */
 function webviewStrings(): Record<string, string> {
   return {
-    headerHint: vscode.l10n.t('Ask with @btw in the chat'),
+    headerHint: vscode.l10n.t('Side questions'),
+    placeholder: vscode.l10n.t('Ask a side question… (works while the agent is busy)'),
+    inputLabel: vscode.l10n.t('Side question'),
+    hint: vscode.l10n.t('Enter to send · Shift+Enter for a new line'),
+    send: vscode.l10n.t('Send'),
     clear: vscode.l10n.t('Clear'),
     clearTitle: vscode.l10n.t('Remove all side questions'),
     stop: vscode.l10n.t('Stop'),
@@ -294,9 +326,9 @@ function webviewStrings(): Record<string, string> {
     stopped: vscode.l10n.t('Stopped.'),
     answerReady: vscode.l10n.t('Answer ready'),
     question: vscode.l10n.t('Question'),
-    emptyTitle: vscode.l10n.t('Answers to your side questions appear here.'),
+    emptyTitle: vscode.l10n.t('Type here (works while the agent is busy) or use @btw in the chat.'),
     emptyBody: vscode.l10n.t(
-      'Type @btw and your question in the chat. It is answered with the context of your chat and editor, without being mixed into your main task.',
+      'Answered with the context of your chat and editor, without being mixed into your main task.',
     ),
   };
 }
