@@ -106,11 +106,10 @@ export class StatusBar implements vscode.Disposable {
     const severe = f.status === 'critical' || f.status === 'exhausted';
     const warn = severe || f.status === 'ahead';
     const custom = resolveColor(cfg.statusBarColor);
-    // With a custom colour the user's colour stays; warnings show as a symbol
-    // instead of the coloured background (which would override the colour).
-    const marker = warn && custom ? (severe ? '$(error)' : '$(warning)') : '';
+    // With a custom colour only the chosen display is shown in that colour;
+    // the theme's warning background is used only with the default colour.
     const icon = iconFor(cfg.statusBarIcon, fillLevel(snap.remaining, snap.entitlement));
-    item.text = `${[marker, icon, value].filter(Boolean).join(' ')}${stale ? ' $(history)' : ''}`;
+    item.text = `${[icon, value].filter(Boolean).join(' ')}${stale ? ' $(history)' : ''}`;
 
     if (warn && !custom) {
       item.backgroundColor = new vscode.ThemeColor(severe ? 'statusBarItem.errorBackground' : 'statusBarItem.warningBackground');

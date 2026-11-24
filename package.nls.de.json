@@ -47,7 +47,7 @@
   "cfg.icon.ring": "Ring",
   "cfg.icon.bars": "Balken",
   "cfg.icon.none": "Kein Icon, nur Text",
-  "cfg.statusBarColor": "Text-/Icon-Farbe des Statusleisten-Eintrags: `auto` (Theme), eine Vorlage oder eine Hex-Farbe. Mit eigener Farbe werden Warnungen als ⚠-Symbol statt mit farbigem Hintergrund angezeigt.",
+  "cfg.statusBarColor": "Text-/Icon-Farbe des Statusleisten-Eintrags: `auto` (Theme), eine Vorlage oder eine Hex-Farbe. Mit eigener Farbe zeigt der Eintrag immer nur deine gewählte Anzeige in dieser Farbe (ohne Warnhintergrund).",
   "cfg.surplusHint": "In der letzten Monatswoche Bescheid geben, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.",
   "cfg.activity": "Aktive Editor-Zeit und Verbrauch pro Git-Branch für den Verlauf aufzeichnen. Bleibt auf diesem Rechner.",
   "cfg.preferredModels": "Modellfamilien, die `@sparsam` nutzen darf, in Reihenfolge (Präfix-Treffer). Wähle Modelle, die in deinem Plan inklusive sind (Multiplikator 0x). Ist keines verfügbar, antwortet `@sparsam` nicht, statt auf ein Premium-Modell auszuweichen.",
