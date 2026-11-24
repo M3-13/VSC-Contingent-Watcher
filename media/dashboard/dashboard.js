@@ -572,30 +572,20 @@
       <div class="tip-foot"><button class="link" data-cmd="openWalkthrough" data-k="guide2">${icon.book}${t('openGuide')}</button></div></section>`;
   }
 
-  /** "/btw" etc. rendered as code inside an otherwise escaped sentence. */
-  function withCode(id, code) {
-    return t(id, '\u0000').replace('\u0000', `<code>${esc(code)}</code>`);
+  /** Tips tab: what btw is and which model answers. */
+  function btwCard() {
+    const free = model.settings.btwModel === 'included';
+    return `<section class="card btw-card" aria-labelledby="btw-title">
+      <div class="card-head"><h2 id="btw-title">${icon.aside}${t('btwTitle')}</h2>${free ? '<span class="badge badge-good">0×</span>' : ''}</div>
+      <p class="btw-text">${t('btwText')}</p>
+      <p class="btw-text muted">${t(free ? 'btwModelInfoFree' : 'btwModelInfoChat')}</p>
+      <button class="btn primary" data-cmd="btw" data-k="btw-ask">${icon.aside}${t('askBtw')}</button></section>`;
   }
 
-  function sparsamCard() {
-    return `<section class="card sparsam-card" aria-labelledby="sparsam-title">
-      <div class="card-head"><h2 id="sparsam-title">${icon.chat}${t('sparsamTitle')}</h2><span class="badge badge-good">0×</span></div>
-      <p class="sparsam-text">${t('sparsamText')}</p>
-      <p class="sparsam-text muted">${withCode('sparsamBtw', '/btw')}</p>
-      <button class="btn primary" data-cmd="askSparsam" data-k="sparsam-ask">${icon.chat}${t('askSparsam')}</button></section>`;
-  }
-
-  /** Slim pointers to @sparsam and btw on the overview, in one card. */
-  function sparsamStrip() {
-    const item = (cmd, k, ic, title, sub) => `<button class="strip" data-cmd="${cmd}" data-k="${k}"><span class="strip-icon">${ic}</span>
-      <span class="strip-text"><strong>${title}</strong><span>${sub}</span></span>${icon.chevron}</button>`;
-    return `<nav class="strips" aria-label="${t('chatGroup')}">${item('askSparsam', 'strip-ask', icon.chat, t('askSparsam'), t('sparsamStrip'))}${item(
-      'btw',
-      'strip-btw',
-      icon.aside,
-      t('askBtw'),
-      t('btwStrip'),
-    )}</nav>`;
+  /** Slim pointer to btw on the overview. */
+  function btwStrip() {
+    return `<nav class="strips" aria-label="${t('btwGroup')}"><button class="strip" data-cmd="btw" data-k="strip-btw"><span class="strip-icon">${icon.aside}</span>
+      <span class="strip-text"><strong>${t('askBtw')}</strong><span>${t('btwStrip')}</span></span>${icon.chevron}</button></nav>`;
   }
 
   function surplusBanner() {
@@ -1002,12 +992,26 @@
           'addModel',
         )}" placeholder="gpt-4.1"></span>`
       : `<button class="tchip tchip-add" data-action="addModel" data-k="model-add" title="${t('addModel')}" aria-label="${t('addModel')}">${icon.plus}</button>`;
+    const freeModels = s.btwModel === 'included';
     const chat = group(
-      icon.chat,
-      t('chatGroup'),
-      `<div class="field"><span class="field-label" id="lbl-models">${t('preferredModels')}<span class="field-hint"> · ${t(
-        'preferredModelsHint',
-      )}</span></span><div class="chips" role="group" aria-labelledby="lbl-models">${modelChips}${addModel}</div></div>
+      icon.aside,
+      t('btwGroup'),
+      `<div class="field"><span class="field-label" id="lbl-btwmodel">${t('btwModel')}</span>${segmented(
+        'btwModel',
+        freeModels ? 'included' : 'chat',
+        [
+          ['chat', t('btwModelChat')],
+          ['included', t('btwModelFree')],
+        ],
+        'lbl-btwmodel',
+      )}<span class="row-hint">${t(freeModels ? 'btwModelInfoFree' : 'btwModelInfoChat')}</span></div>
+      ${
+        freeModels
+          ? `<div class="field"><span class="field-label" id="lbl-models">${t('preferredModels')}<span class="field-hint"> · ${t(
+              'preferredModelsHint',
+            )}</span></span><div class="chips" role="group" aria-labelledby="lbl-models">${modelChips}${addModel}</div></div>`
+          : ''
+      }
       ${row('btwIncludeChat', s.btwIncludeChat, t('btwIncludeChat'))}
       <div class="btn-row"><button class="btn secondary small" data-cmd="btw" data-k="set-btw">${icon.aside}${t('askBtw')}</button></div>`,
     );
@@ -1120,7 +1124,7 @@
     const urgentOverage = model.quota.overageCount > 0;
     return `${surplusBanner()}<div class="layout">
       <div class="col col-a">${hero()}${urgentOverage ? overage() : ''}</div>
-      <div class="col col-b">${tiles()}${chartCard()}${sparsamStrip()}</div></div>`;
+      <div class="col col-b">${tiles()}${chartCard()}${btwStrip()}</div></div>`;
   }
 
   function historyPanel() {
@@ -1128,7 +1132,7 @@
   }
 
   function tipsPanel() {
-    return `<div class="grid">${tipsCard()}${sparsamCard()}${allTipsCard()}</div>`;
+    return `<div class="grid">${tipsCard()}${btwCard()}${allTipsCard()}</div>`;
   }
 
   function panel() {

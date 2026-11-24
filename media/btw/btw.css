@@ -360,13 +360,50 @@ button { font: inherit; color: inherit; }
   white-space: nowrap;
   pointer-events: none;
 }
-.has-text .hint { display: none; }
-.box .model-btn { align-self: center; height: 24px; margin: 0; }
-.box .hint + .model-btn { margin-left: 2px; }
+
+/* Toolbar under the input: model mode, fallback model picker, hint. */
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  min-width: 0;
+}
+.bar .hint { flex: 0 1 auto; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
+.bar .model-btn { height: 22px; font-size: 11.5px; }
+.bar [hidden] { display: none; }
+.seg {
+  display: inline-flex;
+  flex: none;
+  padding: 1px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+}
+.seg button {
+  height: 20px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11.5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.seg button:hover { color: var(--fg); }
+.seg button[aria-checked="true"] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: color-mix(in srgb, var(--accent) 75%, var(--fg));
+  font-weight: 600;
+}
+body.vscode-high-contrast .seg button[aria-checked="true"],
+body.vscode-high-contrast-light .seg button[aria-checked="true"] {
+  outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
+}
 
 /* Narrow panels: icon-only card actions, no input hint. */
 @media (max-width: 460px) {
-  .hint { display: none; }
+  .hint { display: none !important; }
   .tool span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .tool { padding: 0 5px; }
 }

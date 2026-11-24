@@ -14,6 +14,8 @@
   /** @type {any[]} */
   let cards = [];
   let built = false;
+  /** 'chat' | 'included' */
+  let mode = 'chat';
   /** @type {HTMLElement} */ let list;
   /** @type {HTMLElement} */ let scroller;
   /** @type {HTMLTextAreaElement} */ let input;
@@ -60,6 +62,7 @@
     check: I('<path d="M3.25 8.5 6.5 11.75 12.75 4.5"/>'),
     chat: I('<path d="M2.5 3.5h11v7.5H7.5l-3 2.5V11h-2z"/>'),
     retry: I('<path d="M13.25 8a5.25 5.25 0 1 1-1.54-3.71"/><path d="M13.25 2.5v3h-3"/>'),
+    gear: I('<circle cx="8" cy="8" r="2.25"/><path d="M8 1.75v1.5M8 12.75v1.5M1.75 8h1.5M12.75 8h1.5M3.6 3.6l1.05 1.05M11.35 11.35l1.05 1.05M3.6 12.4l1.05-1.05M11.35 4.65l1.05-1.05"/>'),
     model: I('<path d="M8 1.75 13.5 4.9v6.2L8 14.25 2.5 11.1V4.9z"/><path d="M2.75 5 8 8l5.25-3M8 8v6"/>'),
     aside: I('<path d="M2.5 4.5h7M2.5 8h5M2.5 11.5h4"/><path d="M10.5 7.25a2.75 2.75 0 1 1 1.6 2.5L10.5 11z"/>'),
     warn: I('<path d="M8 2.25 14.25 13.5H1.75z"/><path d="M8 6.5v3M8 11.6v.01"/>'),
@@ -209,9 +212,15 @@
         <div class="box">
           <label class="sr-only" for="input">${t('inputLabel')}</label>
           <textarea id="input" rows="1" placeholder="${t('placeholder')}" aria-describedby="hint" spellcheck="true"></textarea>
-          <span class="hint" id="hint">${t('hint')}</span>
-          <button type="button" class="tool model-btn" id="model" title="${t('changeModelTitle')}">${icon.model}<span>${t('changeModel')}</span></button>
           <button type="submit" class="send" id="send" title="${t('send')}" aria-label="${t('send')}">${icon.send}</button>
+        </div>
+        <div class="bar">
+          <div class="seg" id="mode" role="radiogroup" aria-label="${t('modeLabel')}">
+            <button type="button" role="radio" data-mode="chat" title="${t('modeChatTitle')}">${t('modeChat')}</button>
+            <button type="button" role="radio" data-mode="included" title="${t('modeIncludedTitle')}">${t('modeIncluded')}</button>
+          </div>
+          <button type="button" class="tool model-btn" id="model" title="${t('changeModelTitle')}">${icon.model}<span>${t('changeModel')}</span></button>
+          <span class="hint" id="hint">${t('hint')}</span>
         </div>
       </form>
       <div class="sr-only" id="live" aria-live="polite"></div>`;
@@ -249,6 +258,45 @@
     });
     list.addEventListener('click', onListClick);
     document.getElementById('model')?.addEventListener('click', () => vscode.postMessage({ type: 'chooseModel' }));
+    const seg = /** @type {HTMLElement} */ (document.getElementById('mode'));
+    seg.addEventListener('click', (e) => {
+      const b = /** @type {HTMLElement} */ (e.target).closest('[data-mode]');
+      if (b) {
+        setMode(b.getAttribute('data-mode') || 'chat', true);
+      }
+    });
+    seg.addEventListener('keydown', (e) => {
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+        e.preventDefault();
+        setMode(mode === 'chat' ? 'included' : 'chat', true);
+        /** @type {HTMLElement | null} */ (seg.querySelector(`[data-mode="${mode}"]`))?.focus();
+      }
+    });
+    renderMode();
+  }
+
+  /** @param {string} m @param {boolean} [send] */
+  function setMode(m, send) {
+    const next = m === 'included' ? 'included' : 'chat';
+    if (send && next !== mode) {
+      vscode.postMessage({ type: 'setMode', mode: next });
+    }
+    mode = next;
+    renderMode();
+  }
+
+  function renderMode() {
+    const seg = document.getElementById('mode');
+    if (!seg) {
+      return;
+    }
+    for (const b of seg.querySelectorAll('[data-mode]')) {
+      const on = b.getAttribute('data-mode') === mode;
+      b.setAttribute('aria-checked', String(on));
+      b.setAttribute('tabindex', on ? '0' : '-1');
+    }
+    // The fallback model picker only matters when following the chat's model.
+    document.getElementById('model')?.toggleAttribute('hidden', mode !== 'chat');
   }
 
   function autosize() {
@@ -344,7 +392,11 @@
       acts.push(`<button type="button" class="tool" data-act="cancel">${icon.stop}<span>${t('stop')}</span></button>`);
     } else {
       if (c.status === 'noModel') {
-        acts.push(`<button type="button" class="tool primary" data-act="chooseModel" title="${t('changeModelTitle')}">${icon.model}<span>${t('changeModel')}</span></button>`);
+        acts.push(
+          c.fix === 'openSettings'
+            ? `<button type="button" class="tool primary" data-act="openSettings">${icon.gear}<span>${t('openSettings')}</span></button>`
+            : `<button type="button" class="tool primary" data-act="chooseModel" title="${t('changeModelTitle')}">${icon.model}<span>${t('changeModel')}</span></button>`,
+        );
       }
       if (c.status === 'error' || c.status === 'cancelled' || c.status === 'noModel') {
         acts.push(`<button type="button" class="tool" data-act="retry">${icon.retry}<span>${t('retry')}</span></button>`);
@@ -480,6 +532,9 @@
       case 'chooseModel':
         vscode.postMessage({ type: 'chooseModel' });
         return;
+      case 'openSettings':
+        vscode.postMessage({ type: 'openSettings' });
+        return;
     }
   }
 
@@ -519,6 +574,7 @@
     switch (msg.type) {
       case 'init':
         S = msg.strings || {};
+        mode = msg.mode === 'included' ? 'included' : 'chat';
         cards = Array.isArray(msg.cards) ? msg.cards : [];
         if (!built) {
           build();
@@ -558,6 +614,9 @@
         }
         return;
       }
+      case 'mode':
+        setMode(msg.mode, false);
+        return;
       case 'focus':
         if (built) {
           focusInput(msg.prefill);

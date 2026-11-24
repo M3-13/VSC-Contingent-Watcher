@@ -1,12 +1,15 @@
 /**
- * "BTW" panel: ask a quick side question while you keep working. Answered by an
- * included model with a snapshot of the current chat and editor as context;
- * nothing is added to the main chat. Q&A lives only in memory for this session.
+ * "BTW" panel: ask a quick side question while you keep working. Answered by the
+ * current chat's model (or a free included model, see `contingentWatcher.btw.model`)
+ * with a snapshot of the current chat and editor as context; nothing is added to
+ * the main chat. Q&A lives only in memory for this session.
  */
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { streamBtwAnswer } from './answer';
-import { BtwModelSource, chooseBtwModel, resolveBtwModel } from './model';
+import { noModelMarkdown, PREFERRED_MODELS_SETTING } from '../chat/lm';
+import { BtwModelSource, btwMode, chooseBtwModel, resolveBtwModel, setBtwMode } from './model';
+import { BtwMode, btwModeOf } from './modelMatch';
 import { describeBtwContext, gatherBtwContext, hasEditorSelection } from './context';
 
 type CardStatus = 'thinking' | 'streaming' | 'done' | 'cancelled' | 'error' | 'noModel';
@@ -24,10 +27,13 @@ export interface BtwCard {
   /** Why this model, e.g. "same model as your chat" (localised). */
   modelNote?: string;
   error?: string;
+  /** For status 'noModel': how to fix it. */
+  fix?: 'chooseModel' | 'openSettings';
 }
 
 type ToWebview =
-  | { type: 'init'; strings: Record<string, string>; cards: BtwCard[]; focus?: { prefill?: string } }
+  | { type: 'init'; strings: Record<string, string>; cards: BtwCard[]; mode: BtwMode; focus?: { prefill?: string } }
+  | { type: 'mode'; mode: BtwMode }
   | { type: 'card'; card: BtwCard }
   /** `at`: offset in the answer where `text` starts (lets the webview ignore text it already has). */
   | { type: 'delta'; id: string; text: string; at: number }
@@ -41,7 +47,9 @@ type FromWebview =
   | { type: 'retry'; id: string }
   | { type: 'copy'; text: string }
   | { type: 'continue'; id: string }
-  | { type: 'chooseModel' };
+  | { type: 'chooseModel' }
+  | { type: 'openSettings' }
+  | { type: 'setMode'; mode: string };
 
 const MAX_CARDS = 50;
 const MAX_QUESTION = 4000;
@@ -64,6 +72,13 @@ export class BtwViewProvider implements vscode.WebviewViewProvider, vscode.Dispo
     private readonly log: vscode.LogOutputChannel,
   ) {
     this.mediaRoot = vscode.Uri.joinPath(context.extensionUri, 'media');
+    this.disposables.push(
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('contingentWatcher.btw.model')) {
+          this.post({ type: 'mode', mode: btwMode() });
+        }
+      }),
+    );
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -136,7 +151,7 @@ export class BtwViewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       switch (msg?.type) {
         case 'ready':
           this.ready = true;
-          this.post({ type: 'init', strings: webviewStrings(), cards: this.cards, focus: this.pendingFocus });
+          this.post({ type: 'init', strings: webviewStrings(), cards: this.cards, mode: btwMode(), focus: this.pendingFocus });
           this.pendingFocus = undefined;
           return;
         case 'ask':
@@ -172,6 +187,12 @@ export class BtwViewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         case 'chooseModel':
           await this.changeModel();
           return;
+        case 'openSettings':
+          await vscode.commands.executeCommand('workbench.action.openSettings', PREFERRED_MODELS_SETTING);
+          return;
+        case 'setMode':
+          await setBtwMode(btwModeOf(msg.mode));
+          return;
       }
     } catch (err) {
       this.log.error(`btw: ${err instanceof Error ? err.message : String(err)}`);
@@ -195,7 +216,7 @@ export class BtwViewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   private async run(card: BtwCard): Promise<void> {
     const cts = new vscode.CancellationTokenSource();
     this.running.set(card.id, cts);
-    Object.assign(card, { answer: '', status: 'thinking', error: undefined, model: undefined, modelNote: undefined, context: undefined });
+    Object.assign(card, { answer: '', status: 'thinking', error: undefined, model: undefined, modelNote: undefined, fix: undefined, context: undefined });
     this.post({ type: 'card', card });
 
     let pending = '';
@@ -219,7 +240,12 @@ export class BtwViewProvider implements vscode.WebviewViewProvider, vscode.Dispo
       if (pick.kind !== 'ok') {
         if (pick.kind === 'notChosen') {
           card.status = 'noModel';
+          card.fix = 'chooseModel';
           card.answer = vscode.l10n.t('No model chosen, so btw did not answer. Choose a model and try again.');
+        } else if (pick.kind === 'noIncluded') {
+          card.status = 'noModel';
+          card.fix = 'openSettings';
+          card.answer = noModelMarkdown(pick.families);
         } else {
           card.status = 'error';
           card.error = pick.message;
@@ -331,9 +357,13 @@ function webviewStrings(): Record<string, string> {
     continueTitle: vscode.l10n.t('Open the question in Copilot Chat to continue there'),
     retry: vscode.l10n.t('Retry'),
     changeModel: vscode.l10n.t('Change model'),
-    changeModelTitle: vscode.l10n.t(
-      "btw uses the same model as your chat. Choose the model to use when the chat's model can't be detected or the model in the setting contingentWatcher.btw.model isn't available.",
-    ),
+    changeModelTitle: vscode.l10n.t("Choose the model btw uses when your chat's model can't be detected"),
+    openSettings: vscode.l10n.t('Open settings'),
+    modeLabel: vscode.l10n.t('Model for btw'),
+    modeChat: vscode.l10n.t('Chat model'),
+    modeChatTitle: vscode.l10n.t('Same model as your current Copilot chat. Premium models use premium requests.'),
+    modeIncluded: vscode.l10n.t('Free model'),
+    modeIncludedTitle: vscode.l10n.t('An included model (no premium requests), from contingentWatcher.chat.preferredModels'),
     context: vscode.l10n.t('Context: {0}'),
     notAdded: vscode.l10n.t('not added to your chat'),
     thinking: vscode.l10n.t('Thinking'),
@@ -342,9 +372,9 @@ function webviewStrings(): Record<string, string> {
     question: vscode.l10n.t('Question'),
     emptyTitle: vscode.l10n.t('Ask a quick side question while you keep working.'),
     emptyBody: vscode.l10n.t(
-      'It sees a snapshot of your current chat and editor, is answered by the same model as your chat and is not added to your chat.',
+      'It sees a snapshot of your current chat and editor and is not added to your chat.',
     ),
-    emptyCost: vscode.l10n.t('Premium models use premium requests, just like in the chat.'),
+    emptyCost: vscode.l10n.t('Chat model: costs what your chat model costs. Free model: no premium requests.'),
   };
 }
 
@@ -352,8 +382,8 @@ function sourceLabel(source: BtwModelSource): string {
   switch (source) {
     case 'chat':
       return vscode.l10n.t('same model as your chat');
-    case 'setting':
-      return vscode.l10n.t('from your settings');
+    case 'included':
+      return vscode.l10n.t('included model · no premium requests');
     default:
       return vscode.l10n.t('chosen by you');
   }

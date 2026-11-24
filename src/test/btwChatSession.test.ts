@@ -44,17 +44,17 @@ test('message.parts fallback, string message and pending response', () => {
   ]);
 });
 
-test('skips our own participant by agent id and prefix', () => {
+test('skips requests by agent id and prefix', () => {
   const session = {
     requests: [
       req('real question', { value: 'real answer' }),
-      { ...req('@sparsam /btw side', { value: 'x' }), agent: { id: 'contingentWatcher.sparsam' } },
-      req('@sparsam what is 2+2', { value: '4' }),
+      { ...req('@helper /x side', { value: 'x' }), agent: { id: 'some.participant' } },
+      req('@helper what is 2+2', { value: '4' }),
     ],
   };
   const snap = parseChatSession(JSON.stringify(session), {
-    skipAgentIds: ['contingentWatcher.sparsam'],
-    skipPrefixes: ['@sparsam'],
+    skipAgentIds: ['some.participant'],
+    skipPrefixes: ['@helper'],
   });
   assert.equal(snap?.turns.length, 1);
   assert.equal(snap?.turns[0].user, 'real question');

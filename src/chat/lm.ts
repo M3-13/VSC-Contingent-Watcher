@@ -1,6 +1,6 @@
 /**
- * Language model helpers shared by @sparsam and btw: included-model selection
- * for @sparsam (never falls back to another model) and friendly error texts.
+ * Language model helpers for btw: included-model selection for the free mode
+ * (never falls back to another model) and friendly error texts.
  */
 import * as vscode from 'vscode';
 import { availableFamilies, chooseModel, normalizePreferred } from './modelChoice';

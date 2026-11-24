@@ -34,14 +34,13 @@ export function dashboardStrings(): Record<string, string> {
     // Surplus ("use it or lose it")
     surplusBannerHint: vscode.l10n.t('A good moment for bigger tasks. Unused allowance expires at reset.'),
 
-    // @sparsam
-    askSparsam: vscode.l10n.t('Ask @sparsam'),
-    sparsamStrip: vscode.l10n.t('Simple questions, no premium requests'),
-    sparsamTitle: vscode.l10n.t('Free answers with @sparsam'),
-    sparsamText: vscode.l10n.t('Ask simple questions with @sparsam in chat. An included (0x) model answers, so it costs no premium requests.'),
-    sparsamBtw: vscode.l10n.t("{0} asks a quick side question that doesn't touch your main chat."),
+    // btw
     askBtw: vscode.l10n.t('Ask btw'),
     btwStrip: vscode.l10n.t('Quick side question, chat stays as is'),
+    btwTitle: vscode.l10n.t('Side questions with btw'),
+    btwText: vscode.l10n.t("Ask a quick side question while Copilot keeps working. It sees your current chat and editor, and the answer isn't added to your chat."),
+    btwModelInfoChat: vscode.l10n.t('Answered by the same model as your chat, so it costs what that model costs.'),
+    btwModelInfoFree: vscode.l10n.t('Answered by a free included model, so it uses no premium requests.'),
 
     // History: activity
     activity: vscode.l10n.t('Activity'),
@@ -191,8 +190,11 @@ export function dashboardStrings(): Record<string, string> {
     freeHint: vscode.l10n.t('Do not use your allowance'),
     manageCopilot: vscode.l10n.t('Manage Copilot'),
     openChat: vscode.l10n.t('Open chat'),
-    chatGroup: vscode.l10n.t('Chat'),
-    preferredModels: vscode.l10n.t('@sparsam models'),
+    btwGroup: vscode.l10n.t('btw'),
+    btwModel: vscode.l10n.t('Model'),
+    btwModelChat: vscode.l10n.t('Same as chat'),
+    btwModelFree: vscode.l10n.t('Free model'),
+    preferredModels: vscode.l10n.t('Free models'),
     preferredModelsHint: vscode.l10n.t('Tried in this order'),
     addModel: vscode.l10n.t('Add model'),
     removeModel: vscode.l10n.t('Remove {0}'),

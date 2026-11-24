@@ -38,7 +38,6 @@
   "cfg.apiUrl": "Optional API base URL override, e.g. `https://api.acme.ghe.com`. Leave empty to derive it automatically.",
   "view.container": "Copilot Contingent",
   "view.dashboard": "Dashboard",
-  "cmd.askSparsam": "Ask @sparsam (included model)",
   "cmd.configureBillingToken": "Set Up Per-Model Usage (GitHub Token)",
   "cfg.accentColor": "Accent colour of the dashboard gauge: `auto` (theme), a preset (`teal`, `violet`, `blue`, `green`, `orange`, `pink`) or a hex colour like `#ff8800`.",
   "cfg.statusBarIcon": "Icon style in the status bar. The icon fills down as your allowance is used.",
@@ -50,12 +49,13 @@
   "cfg.statusBarColor": "Text/icon colour of the status bar item: `auto` (theme), a preset or a hex colour. With a custom colour the item always shows just your chosen display in that colour (no warning background).",
   "cfg.surplusHint": "In the last week of the month, tell me if part of my allowance will likely expire unused (\"use it or lose it\").",
   "cfg.activity": "Record active editor time and usage per git branch for the history view. Stays on this computer.",
-  "cfg.preferredModels": "Model families `@sparsam` may use, in order of preference (prefix match). Pick models that are included in your plan (0x multiplier). If none is available, `@sparsam` does not answer rather than falling back to a premium model.",
-  "chat.description": "Answers with an included model, no premium requests",
-  "chat.btw": "Quick side question with a free model; your main chat stays untouched",
+  "cfg.preferredModels": "Free (included, 0x) model families btw may use in *Free model* mode, in order of preference (prefix match). If none is available, btw does not answer rather than falling back to a premium model.",
   "view.btwContainer": "BTW",
   "view.btw": "Side questions",
   "cmd.btw": "Ask a Side Question (btw)",
   "cmd.btwClear": "Clear Side Questions",
-  "cfg.btwIncludeChat": "Use a snapshot of your most recent Copilot chat (read from VS Code's local chat storage) as context for btw side questions. When off, only the editor is used."
+  "cfg.btwIncludeChat": "Use a snapshot of your most recent Copilot chat (read from VS Code's local chat storage) as context for btw side questions. When off, only the editor is used.",
+  "cfg.btwModel": "Which model answers btw side questions.",
+  "cfg.btwModel.chat": "Same model as your current Copilot chat (premium models use premium requests). If it can't be detected, btw asks once and remembers your choice.",
+  "cfg.btwModel.included": "A free included model: the first available one from `#contingentWatcher.chat.preferredModels#`. No premium requests."
 }

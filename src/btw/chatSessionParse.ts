@@ -37,9 +37,9 @@ export interface ParseOptions {
   maxChars?: number;
   /** Upper bound for a single message (default 4000). */
   maxCharsPerMessage?: number;
-  /** Requests handled by these chat participants are skipped (e.g. our own @sparsam). */
+  /** Requests handled by these chat participants are skipped. */
   skipAgentIds?: readonly string[];
-  /** Requests whose text starts with one of these prefixes are skipped (e.g. '@sparsam'). */
+  /** Requests whose text starts with one of these prefixes are skipped. */
   skipPrefixes?: readonly string[];
 }
 

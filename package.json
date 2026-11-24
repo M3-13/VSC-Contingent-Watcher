@@ -435,6 +435,19 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "%cfg.btwIncludeChat%"
+        },
+        "contingentWatcher.btw.model": {
+          "type": "string",
+          "enum": [
+            "chat",
+            "included"
+          ],
+          "enumDescriptions": [
+            "%cfg.btwModel.chat%",
+            "%cfg.btwModel.included%"
+          ],
+          "default": "chat",
+          "markdownDescription": "%cfg.btwModel%"
         }
       }
     },

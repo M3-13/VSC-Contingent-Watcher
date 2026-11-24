@@ -38,7 +38,6 @@
   "cfg.apiUrl": "Optionale API-Basis-URL, z. B. `https://api.acme.ghe.com`. Leer lassen für automatische Erkennung.",
   "view.container": "Copilot-Kontingent",
   "view.dashboard": "Dashboard",
-  "cmd.askSparsam": "@sparsam fragen (inklusives Modell)",
   "cmd.configureBillingToken": "Verbrauch pro Modell einrichten (GitHub-Token)",
   "cfg.accentColor": "Akzentfarbe des Tachometers im Dashboard: `auto` (Theme), eine Vorlage (`teal`, `violet`, `blue`, `green`, `orange`, `pink`) oder eine Hex-Farbe wie `#ff8800`.",
   "cfg.statusBarIcon": "Icon-Stil in der Statusleiste. Das Icon leert sich, während dein Kontingent verbraucht wird.",
@@ -50,12 +49,13 @@
   "cfg.statusBarColor": "Text-/Icon-Farbe des Statusleisten-Eintrags: `auto` (Theme), eine Vorlage oder eine Hex-Farbe. Mit eigener Farbe zeigt der Eintrag immer nur deine gewählte Anzeige in dieser Farbe (ohne Warnhintergrund).",
   "cfg.surplusHint": "In der letzten Monatswoche Bescheid geben, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.",
   "cfg.activity": "Aktive Editor-Zeit und Verbrauch pro Git-Branch für den Verlauf aufzeichnen. Bleibt auf diesem Rechner.",
-  "cfg.preferredModels": "Modellfamilien, die `@sparsam` nutzen darf, in Reihenfolge (Präfix-Treffer). Wähle Modelle, die in deinem Plan inklusive sind (Multiplikator 0x). Ist keines verfügbar, antwortet `@sparsam` nicht, statt auf ein Premium-Modell auszuweichen.",
-  "chat.description": "Antwortet mit einem inklusiven Modell, ohne Premium-Requests",
-  "chat.btw": "Schnelle Zwischenfrage mit einem Gratis-Modell; dein Haupt-Chat bleibt unberührt",
+  "cfg.preferredModels": "Kostenlose (inklusive, 0x) Modellfamilien, die btw im Modus *Kostenloses Modell* nutzen darf, in Reihenfolge (Präfix-Treffer). Ist keine verfügbar, antwortet btw nicht, statt auf ein Premium-Modell auszuweichen.",
   "view.btwContainer": "BTW",
   "view.btw": "Nebenfragen",
   "cmd.btw": "Nebenfrage stellen (btw)",
   "cmd.btwClear": "Nebenfragen leeren",
-  "cfg.btwIncludeChat": "Nutze einen Schnappschuss deines letzten Copilot-Chats (aus dem lokalen Chat-Speicher von VS Code) als Kontext für btw-Nebenfragen. Wenn aus, wird nur der Editor verwendet."
+  "cfg.btwIncludeChat": "Nutze einen Schnappschuss deines letzten Copilot-Chats (aus dem lokalen Chat-Speicher von VS Code) als Kontext für btw-Nebenfragen. Wenn aus, wird nur der Editor verwendet.",
+  "cfg.btwModel": "Welches Modell btw-Nebenfragen beantwortet.",
+  "cfg.btwModel.chat": "Dasselbe Modell wie dein aktueller Copilot-Chat (Premium-Modelle verbrauchen Premium-Requests). Wird es nicht erkannt, fragt btw einmal und merkt sich deine Wahl.",
+  "cfg.btwModel.included": "Ein kostenloses inklusives Modell: das erste verfügbare aus `#contingentWatcher.chat.preferredModels#`. Keine Premium-Requests."
 }

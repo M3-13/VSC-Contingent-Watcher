@@ -1,24 +1,27 @@
 /**
- * Which model answers a btw side question. In order:
- * 1. `contingentWatcher.btw.model` = "chat" (default): the model selected in the
- *    current Copilot chat (read from the chat session); otherwise the family
- *    named in the setting.
- * 2. The model the user chose for btw before (globalState).
- * 3. Ask once with a QuickPick and remember the choice.
+ * Which model answers a btw side question, by `contingentWatcher.btw.model`:
+ * - "chat" (default): the model selected in the current Copilot chat (read from
+ *   the chat session); else the model the user chose for btw before (globalState);
+ *   else ask once with a QuickPick and remember the choice.
+ * - "included": the first available family of `contingentWatcher.chat.preferredModels`
+ *   (free, 0x); never falls back to another model.
  * Never picks a model silently.
  */
 import * as vscode from 'vscode';
-import { copilotModels, errMessage } from '../chat/lm';
-import { isChatSetting, matchModel } from './modelMatch';
+import { copilotModels, errMessage, pickIncludedModel } from '../chat/lm';
+import { BtwMode, btwModeOf, matchModel } from './modelMatch';
 
-export type BtwModelSource = 'chat' | 'setting' | 'chosen';
+export type BtwModelSource = 'chat' | 'chosen' | 'included';
 
 export type BtwModelResult =
   | { kind: 'ok'; model: vscode.LanguageModelChat; source: BtwModelSource }
-  /** The user dismissed the model QuickPick. */
+  /** Chat mode: the user dismissed the model QuickPick. */
   | { kind: 'notChosen' }
+  /** Included mode: none of the preferred included families is available. */
+  | { kind: 'noIncluded'; families: string[] }
   | { kind: 'error'; message: string };
 
+export const BTW_MODEL_SETTING = 'contingentWatcher.btw.model';
 const STATE_KEY = 'contingentWatcher.btw.chosenModel';
 let picking: Promise<vscode.LanguageModelChat | undefined> | undefined;
 
@@ -33,8 +36,21 @@ function remembered(ext: vscode.ExtensionContext): RememberedModel | undefined {
   return v && typeof v.id === 'string' && typeof v.family === 'string' ? v : undefined;
 }
 
-function settingValue(): string {
-  return vscode.workspace.getConfiguration('contingentWatcher').get<string>('btw.model', 'chat') ?? 'chat';
+export function btwMode(): BtwMode {
+  return btwModeOf(vscode.workspace.getConfiguration('contingentWatcher').get<string>('btw.model'));
+}
+
+/** Writes the mode (user settings; also the workspace value if one overrides it). */
+export async function setBtwMode(mode: BtwMode): Promise<void> {
+  const cfg = vscode.workspace.getConfiguration('contingentWatcher');
+  await cfg.update('btw.model', mode, vscode.ConfigurationTarget.Global);
+  const info = cfg.inspect<string>('btw.model');
+  if (info?.workspaceValue !== undefined) {
+    await cfg.update('btw.model', mode, vscode.ConfigurationTarget.Workspace);
+  }
+  if (info?.workspaceFolderValue !== undefined) {
+    await cfg.update('btw.model', mode, vscode.ConfigurationTarget.WorkspaceFolder);
+  }
 }
 
 export async function resolveBtwModel(
@@ -42,6 +58,18 @@ export async function resolveBtwModel(
   chatModelId: string | undefined,
   log: (m: string) => void = () => undefined,
 ): Promise<BtwModelResult> {
+  if (btwMode() === 'included') {
+    const pick = await pickIncludedModel();
+    if (pick.kind === 'ok') {
+      return { kind: 'ok', model: pick.model, source: 'included' };
+    }
+    if (pick.kind === 'none') {
+      log(`btw: no preferred included model available (have: ${pick.families.join(', ') || '–'})`);
+      return { kind: 'noIncluded', families: pick.families };
+    }
+    return pick;
+  }
+
   let models: vscode.LanguageModelChat[];
   try {
     models = await copilotModels();
@@ -49,32 +77,20 @@ export async function resolveBtwModel(
     return { kind: 'error', message: errMessage(err) };
   }
   if (models.length === 0) {
-    return {
-      kind: 'error',
-      message: vscode.l10n.t('No Copilot chat models are available. Check that GitHub Copilot Chat is installed and you are signed in.'),
-    };
+    return { kind: 'error', message: noModelsMessage() };
   }
 
-  const setting = settingValue();
-  if (isChatSetting(setting)) {
-    const m = matchModel(models, chatModelId);
-    if (m) {
-      return { kind: 'ok', model: m, source: 'chat' };
-    }
-    log(chatModelId ? `btw: chat model ${chatModelId} is not available here` : 'btw: chat model not detected');
-  } else {
-    const m = matchModel(models, setting, { allowPrefix: true });
-    if (m) {
-      return { kind: 'ok', model: m, source: 'setting' };
-    }
-    log(`btw: model "${setting}" from contingentWatcher.btw.model is not available`);
+  const m = matchModel(models, chatModelId);
+  if (m) {
+    return { kind: 'ok', model: m, source: 'chat' };
   }
+  log(chatModelId ? `btw: chat model ${chatModelId} is not available here` : 'btw: chat model not detected');
 
   const rem = remembered(ext);
   if (rem) {
-    const m = matchModel(models, rem.id) ?? matchModel(models, rem.family);
-    if (m) {
-      return { kind: 'ok', model: m, source: 'chosen' };
+    const r = matchModel(models, rem.id) ?? matchModel(models, rem.family);
+    if (r) {
+      return { kind: 'ok', model: r, source: 'chosen' };
     }
     log(`btw: previously chosen model ${rem.family} is not available`);
   }
@@ -83,6 +99,10 @@ export async function resolveBtwModel(
   picking ??= chooseBtwModel(ext, models).finally(() => (picking = undefined));
   const picked = await picking;
   return picked ? { kind: 'ok', model: picked, source: 'chosen' } : { kind: 'notChosen' };
+}
+
+function noModelsMessage(): string {
+  return vscode.l10n.t('No Copilot chat models are available. Check that GitHub Copilot Chat is installed and you are signed in.');
 }
 
 /** QuickPick of the available Copilot models; remembers the choice. */
@@ -99,9 +119,7 @@ export async function chooseBtwModel(
     }
   }
   if (models.length === 0) {
-    void vscode.window.showWarningMessage(
-      vscode.l10n.t('No Copilot chat models are available. Check that GitHub Copilot Chat is installed and you are signed in.'),
-    );
+    void vscode.window.showWarningMessage(noModelsMessage());
     return undefined;
   }
   const current = remembered(ext);

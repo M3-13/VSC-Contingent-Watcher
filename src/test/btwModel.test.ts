@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { extractSessionModel, parseChatSessionInfo } from '../btw/chatSessionParse';
-import { isChatSetting, matchModel, stripVendor } from '../btw/modelMatch';
+import { btwModeOf, matchModel, stripVendor } from '../btw/modelMatch';
 
 const req = (text: string, extra: Record<string, unknown> = {}) => ({ message: { text }, response: [{ value: 'ok' }], ...extra });
 
@@ -90,10 +90,10 @@ test('user-typed prefix only with allowPrefix (shortest family wins)', () => {
   assert.equal(matchModel(models, 'llama', { allowPrefix: true }), undefined);
 });
 
-test('isChatSetting', () => {
-  assert.equal(isChatSetting('chat'), true);
-  assert.equal(isChatSetting(' Chat '), true);
-  assert.equal(isChatSetting(''), true);
-  assert.equal(isChatSetting(undefined), true);
-  assert.equal(isChatSetting('gpt-5'), false);
+test('btwModeOf', () => {
+  assert.equal(btwModeOf('chat'), 'chat');
+  assert.equal(btwModeOf(' Included '), 'included');
+  assert.equal(btwModeOf(''), 'chat');
+  assert.equal(btwModeOf(undefined), 'chat');
+  assert.equal(btwModeOf('gpt-5'), 'chat');
 });
