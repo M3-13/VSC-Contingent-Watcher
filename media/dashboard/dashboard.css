@@ -510,8 +510,8 @@ button { font: inherit; color: inherit; }
   gap: 8px;
 }
 .tiles > .tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
-@container (min-width: 520px) {
-  .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@container (min-width: 440px) {
+  .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tiles > .tile:last-child:nth-child(odd) { grid-column: auto; }
 }
 
@@ -564,6 +564,9 @@ button { font: inherit; color: inherit; }
   font-size: 11px;
   color: var(--muted);
   min-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .tile-sub .i { width: 12px; height: 12px; color: var(--red); }
 .tone-bad .tile-sub:has(.i) { color: color-mix(in srgb, var(--red) 75%, var(--fg)); }
@@ -734,6 +737,7 @@ button { font: inherit; color: inherit; }
 
 .field { display: grid; gap: 6px; }
 .field-label { font-size: 12px; color: var(--muted); }
+.field-hint { opacity: 0.8; }
 .field.dim { opacity: 0.55; }
 
 .switch {
@@ -819,6 +823,31 @@ button { font: inherit; color: inherit; }
 }
 .num:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; border-color: var(--vscode-focusBorder); }
 
+.segmented.seg-compact { flex: none; }
+.segmented.seg-compact [role='radio'] { flex: none; min-width: 52px; padding: 3px 10px; }
+
+.sel,
+.text {
+  padding: 3px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--vscode-dropdown-border, var(--vscode-input-border, transparent));
+  background: var(--vscode-dropdown-background, var(--vscode-input-background));
+  color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground));
+  font: inherit;
+  font-size: 12px;
+}
+.sel { flex: none; min-width: 84px; cursor: pointer; }
+.text {
+  width: 100%;
+  min-width: 0;
+  border-color: var(--vscode-input-border, transparent);
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+}
+.text::placeholder { color: var(--vscode-input-placeholderForeground, var(--muted)); }
+.sel:focus,
+.text:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; border-color: var(--vscode-focusBorder); }
+
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .tchip {
   display: inline-flex;
@@ -868,6 +897,8 @@ button { font: inherit; color: inherit; }
   text-align: center;
 }
 .tchip-input:focus-within { border-color: var(--vscode-focusBorder); }
+.tchip-text { max-width: 100%; font-variant-numeric: normal; }
+.tchip-input-text input { width: 110px; text-align: left; padding-left: 6px; }
 
 .snooze-row { display: flex; }
 .snooze {
@@ -918,20 +949,28 @@ button { font: inherit; color: inherit; }
 .surplus-text strong { font-weight: 600; text-wrap: pretty; }
 .surplus-text span { color: var(--muted); font-size: 12px; text-wrap: pretty; }
 
+.strips {
+  display: grid;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius);
+  background: var(--card-bg);
+  overflow: hidden;
+}
 .strip {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 9px 10px 9px 12px;
-  border: 1px solid var(--card-border);
-  border-radius: var(--radius);
-  background: var(--card-bg);
+  padding: 8px 10px 8px 12px;
+  border: 0;
+  background: transparent;
   text-align: left;
   cursor: pointer;
   transition: background-color 0.12s ease;
 }
+.strip + .strip { border-top: 1px solid var(--card-border); }
 .strip:hover { background: var(--hover); }
+.strip:focus-visible { outline-offset: -2px; }
 .strip-icon {
   display: grid;
   place-items: center;
@@ -1296,8 +1335,10 @@ body.vscode-high-contrast .tab[aria-selected='true']::after,
 body.vscode-high-contrast-light .tab[aria-selected='true']::after { background: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder)); }
 body.vscode-high-contrast .surplus,
 body.vscode-high-contrast-light .surplus,
-body.vscode-high-contrast .strip,
-body.vscode-high-contrast-light .strip { background: transparent; border-color: var(--vscode-contrastBorder); }
+body.vscode-high-contrast .strips,
+body.vscode-high-contrast-light .strips { background: transparent; border-color: var(--vscode-contrastBorder); }
+body.vscode-high-contrast .strip + .strip,
+body.vscode-high-contrast-light .strip + .strip { border-color: var(--vscode-contrastBorder); }
 body.vscode-high-contrast .swatch[aria-checked='true'],
 body.vscode-high-contrast-light .swatch[aria-checked='true'] { outline-color: var(--vscode-contrastActiveBorder, var(--vscode-focusBorder)); }
 body.vscode-high-contrast .tab:hover,

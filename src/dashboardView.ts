@@ -14,40 +14,52 @@ export interface DashboardHandlers {
   onSetting(key: DashboardSettingKey, value: unknown): void | Promise<unknown>;
 }
 
-const COMMANDS: ReadonlySet<string> = new Set<DashboardCommand>([
-  'refresh',
-  'signIn',
-  'showLog',
-  'openSettings',
-  'openBilling',
-  'manageCopilot',
-  'openChat',
-  'snooze',
-  'unsnooze',
-  'openWalkthrough',
-  'configureBillingToken',
-  'clearBillingToken',
-  'askSparsam',
-  'clearActivity',
-]);
+// Records (not arrays) so the compiler flags a command or setting missing here.
+const COMMANDS: Record<DashboardCommand, true> = {
+  refresh: true,
+  signIn: true,
+  showLog: true,
+  openSettings: true,
+  openBilling: true,
+  manageCopilot: true,
+  openChat: true,
+  snooze: true,
+  unsnooze: true,
+  openWalkthrough: true,
+  configureBillingToken: true,
+  clearBillingToken: true,
+  askSparsam: true,
+  clearActivity: true,
+  btw: true,
+  snoozeCompletions: true,
+};
 
-const SETTINGS: ReadonlySet<string> = new Set<DashboardSettingKey>([
-  'display',
-  'countWeekends',
-  'reserve',
-  'thresholds',
-  'warningsEnabled',
-  'paceWarning',
-  'tipsEnabled',
-  'authProvider',
-  'copilotCompletions',
-  'copilotNextEdit',
-  'accent',
-  'statusBarIcon',
-  'statusBarColor',
-  'surplusHint',
-  'activityTracking',
-]);
+const SETTINGS: Record<DashboardSettingKey, true> = {
+  display: true,
+  countWeekends: true,
+  reserve: true,
+  thresholds: true,
+  warningsEnabled: true,
+  paceWarning: true,
+  tipsEnabled: true,
+  authProvider: true,
+  copilotCompletions: true,
+  copilotNextEdit: true,
+  accent: true,
+  statusBarIcon: true,
+  statusBarColor: true,
+  surplusHint: true,
+  activityTracking: true,
+  refreshIntervalMinutes: true,
+  alignment: true,
+  apiUrl: true,
+  preferredModels: true,
+  btwIncludeChat: true,
+  copilotEagerness: true,
+  copilotLanguage: true,
+};
+
+const has = (o: object, k: unknown): boolean => typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
 
 /** Sidebar dashboard: renders a {@link DashboardModel} in a webview. */
 export class DashboardViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -101,12 +113,12 @@ export class DashboardViewProvider implements vscode.WebviewViewProvider, vscode
           this.update(this.handlers.getModel());
           return;
         case 'command':
-          if (COMMANDS.has(msg.command)) {
+          if (has(COMMANDS, msg.command)) {
             await this.handlers.onCommand(msg.command);
           }
           return;
         case 'setSetting':
-          if (SETTINGS.has(msg.key)) {
+          if (has(SETTINGS, msg.key)) {
             await this.handlers.onSetting(msg.key, msg.value);
           }
           return;

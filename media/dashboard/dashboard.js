@@ -13,6 +13,7 @@
   let model = null;
   let introPending = true;
   let addingThreshold = false;
+  let addingModel = false;
   /** @type {ResizeObserver | undefined} */
   let chartObserver;
   let chartWidth = 0;
@@ -204,6 +205,8 @@
     monitor: S('<rect x="1.75" y="2.75" width="12.5" height="8.5" rx="1.5"/><path d="M5.5 14h5M8 11.25V14"/>'),
     trash: S('<path d="M2.75 4.25h10.5M6.25 4.25V2.75h3.5v1.5M4 4.25l.6 9h6.8l.6-9"/>'),
     check: S('<path d="M3.25 8.5 6.5 11.5l6.25-7"/>'),
+    aside: S('<path d="M2.5 3.5h7.5v5H6l-2.5 2v-2h-1z"/><path d="M12 6.5h1.5v5.25h-1v1.75l-2.25-1.75H7.5V10.5"/>'),
+    pause: S('<circle cx="8" cy="8" r="6"/><path d="M6.5 5.75v4.5M9.5 5.75v4.5"/>'),
   };
 
   // ---------------------------------------------------------------- gauge
@@ -277,8 +280,7 @@
       return '';
     }
     return `<div class="banner" role="status">${icon.history}
-      <div class="banner-text"><strong>${t('offline')}</strong> · ${t('offlineHint')}${model.errorMessage ? `<span class="banner-detail">${esc(model.errorMessage)}</span>` : ''}</div>
-      <button class="link" data-cmd="refresh" data-k="refresh-banner">${t('retry')}</button></div>`;
+      <div class="banner-text"><strong>${t('offline')}</strong> · ${t('offlineHint')}${model.errorMessage ? `<span class="banner-detail">${esc(model.errorMessage)}</span>` : ''}</div></div>`;
   }
 
   function hero() {
@@ -354,6 +356,16 @@
       list.push(tile({ icon: icon.target, label: t('dailyBudget'), value: fmt(budget), unit: perDayUnit, sub: t('budgetDaysLeft', fmt(f.daysLeft)) }));
       const paceTone = f.burnRate > Math.max(budget, m.planPerDay) * 1.05 ? 'bad' : f.burnRate > m.planPerDay * 1.05 ? 'warn' : 'good';
       list.push(tile({ icon: icon.speed, label: t('pace'), value: fmt(f.burnRate), unit: perDayUnit, sub: t('planPerDay', fmt(m.planPerDay)), tone: paceTone }));
+      const ahead = m.buffer >= 0;
+      list.push(
+        tile({
+          icon: icon.shield,
+          label: t('buffer'),
+          value: fmt(Math.round(m.buffer), true),
+          sub: t(ahead ? 'bufferAhead' : 'bufferBehind', fmt(Math.abs(m.bufferDays))),
+          tone: ahead ? 'good' : 'bad',
+        }),
+      );
       const over = f.projectedUsed > q.entitlement;
       list.push(
         tile({
@@ -363,6 +375,15 @@
           unit: `/${fmt(q.entitlement)}`,
           sub: f.exhaustionDate ? `${icon.warning}${t('emptyOn', fmtDate(f.exhaustionDate))}` : t('projectedOf', fmt(q.entitlement)),
           tone: over ? 'bad' : 'good',
+        }),
+      );
+      list.push(
+        tile({
+          icon: icon.flame,
+          label: t('streak'),
+          value: m.streakDays === 1 ? t('streakOne') : t('streakMany', fmt(m.streakDays)),
+          sub: t('withinBudget'),
+          tone: m.streakDays > 0 ? 'good' : '',
         }),
       );
     } else {
@@ -564,10 +585,17 @@
       <button class="btn primary" data-cmd="askSparsam" data-k="sparsam-ask">${icon.chat}${t('askSparsam')}</button></section>`;
   }
 
-  /** Slim pointer to @sparsam on the overview. */
+  /** Slim pointers to @sparsam and btw on the overview, in one card. */
   function sparsamStrip() {
-    return `<button class="strip" data-cmd="askSparsam" data-k="strip-ask"><span class="strip-icon">${icon.chat}</span>
-      <span class="strip-text"><strong>${t('askSparsam')}</strong><span>${t('sparsamStrip')}</span></span>${icon.chevron}</button>`;
+    const item = (cmd, k, ic, title, sub) => `<button class="strip" data-cmd="${cmd}" data-k="${k}"><span class="strip-icon">${ic}</span>
+      <span class="strip-text"><strong>${title}</strong><span>${sub}</span></span>${icon.chevron}</button>`;
+    return `<nav class="strips" aria-label="${t('chatGroup')}">${item('askSparsam', 'strip-ask', icon.chat, t('askSparsam'), t('sparsamStrip'))}${item(
+      'btw',
+      'strip-btw',
+      icon.aside,
+      t('askBtw'),
+      t('btwStrip'),
+    )}</nav>`;
   }
 
   function surplusBanner() {
@@ -832,6 +860,28 @@
     }${side}</div>${body}</section>`;
   }
 
+  const REFRESH_OPTIONS = [2, 5, 10, 15, 30, 60];
+
+  function refreshIntervalRow() {
+    const cur = Number(model.settings.refreshIntervalMinutes) || 10;
+    const opts = REFRESH_OPTIONS.includes(cur) ? REFRESH_OPTIONS : REFRESH_OPTIONS.concat(cur).sort((a, b) => a - b);
+    return `<div class="row"><label class="row-label" for="refresh-interval">${t('refreshInterval')}</label>
+      <select class="sel" id="refresh-interval" data-k="refresh-interval">${opts
+        .map((v) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${t('durM', fmt(v))}</option>`)
+        .join('')}</select></div>`;
+  }
+
+  /** Copilot's eagerness; known values are translated, others capitalised. */
+  function eagernessField(e) {
+    const label = (v) => (model.strings[`eager_${v}`] ? t(`eager_${v}`) : esc(v.charAt(0).toUpperCase() + v.slice(1)));
+    return `<div class="field"><span class="field-label" id="lbl-eager">${t('copilotEagerness')}</span>${segmented(
+      'copilotEagerness',
+      e.value,
+      e.options.map((v) => [v, label(v)]),
+      'lbl-eager',
+    )}</div>`;
+  }
+
   function settingsPanel() {
     const s = model.settings;
     const thresholds = (s.thresholds || []).slice().sort((a, b) => a - b);
@@ -878,7 +928,18 @@
         'lbl-sbicon',
         'seg-glyphs',
       )}</div>
-      <div class="field"><span class="field-label" id="lbl-sbcolor">${t('statusBarColor')}</span>${swatches('statusBarColor', s.statusBarColor, 'lbl-sbcolor')}</div>`,
+      <div class="field"><span class="field-label" id="lbl-sbcolor">${t('statusBarColor')}</span>${swatches('statusBarColor', s.statusBarColor, 'lbl-sbcolor')}</div>
+      <div class="row"><span class="row-label" id="lbl-align">${t('statusBarPosition')}</span>${segmented(
+        'alignment',
+        s.alignment,
+        [
+          ['left', t('alignLeft')],
+          ['right', t('alignRight')],
+        ],
+        'lbl-align',
+        'seg-compact',
+      )}</div>
+      ${refreshIntervalRow()}`,
       '',
       statusBarPreview(),
     );
@@ -908,15 +969,47 @@
       <div class="snooze-row">${snooze}</div>`,
     );
 
-    const hasCopilot = s.copilotCompletions !== undefined || s.copilotNextEdit !== undefined;
+    const lang = s.copilotLanguage;
+    const eager = s.copilotEagerness;
+    const hasCopilot = s.copilotCompletions !== undefined || s.copilotNextEdit !== undefined || !!lang;
     const copilot = group(
       icon.spark,
       t('copilotGroup'),
       `${s.copilotCompletions !== undefined ? row('copilotCompletions', s.copilotCompletions, t('copilotCompletions')) : ''}
+      ${lang ? row('copilotLanguage', lang.enabled, t('copilotLanguage', lang.label || lang.id)) : ''}
       ${s.copilotNextEdit !== undefined ? row('copilotNextEdit', s.copilotNextEdit, t('copilotNextEdit')) : ''}
-      <div class="btn-row"><button class="btn secondary small" data-cmd="manageCopilot" data-k="manage">${icon.sliders}${t('manageCopilot')}</button>
+      ${eager && eager.options && eager.options.length > 1 ? eagernessField(eager) : ''}
+      <div class="btn-row">${
+        s.copilotSnoozeAvailable
+          ? `<button class="btn secondary small" data-cmd="snoozeCompletions" data-k="snooze-compl">${icon.pause}${t('snoozeCompletions')}</button>`
+          : ''
+      }<button class="btn secondary small" data-cmd="manageCopilot" data-k="manage">${icon.sliders}${t('manageCopilot')}</button>
       <button class="btn secondary small" data-cmd="openChat" data-k="chat">${icon.chat}${t('openChat')}</button></div>`,
       hasCopilot ? t('freeHint') : '',
+    );
+
+    const modelChips = (s.preferredModels || [])
+      .map(
+        (m) =>
+          `<span class="tchip tchip-text">${esc(m)}<button class="tchip-x" data-action="removeModel" data-value="${esc(m)}" data-k="pm-${esc(m)}" title="${t(
+            'removeModel',
+            m,
+          )}" aria-label="${t('removeModel', m)}">${icon.close}</button></span>`,
+      )
+      .join('');
+    const addModel = addingModel
+      ? `<span class="tchip tchip-input tchip-input-text"><input type="text" spellcheck="false" autocomplete="off" data-k="model-new" id="model-new" aria-label="${t(
+          'addModel',
+        )}" placeholder="gpt-4.1"></span>`
+      : `<button class="tchip tchip-add" data-action="addModel" data-k="model-add" title="${t('addModel')}" aria-label="${t('addModel')}">${icon.plus}</button>`;
+    const chat = group(
+      icon.chat,
+      t('chatGroup'),
+      `<div class="field"><span class="field-label" id="lbl-models">${t('preferredModels')}<span class="field-hint"> · ${t(
+        'preferredModelsHint',
+      )}</span></span><div class="chips" role="group" aria-labelledby="lbl-models">${modelChips}${addModel}</div></div>
+      ${row('btwIncludeChat', s.btwIncludeChat, t('btwIncludeChat'))}
+      <div class="btn-row"><button class="btn secondary small" data-cmd="btw" data-k="set-btw">${icon.aside}${t('askBtw')}</button></div>`,
     );
 
     const tokenRow = `<div class="row"><div class="row-text"><span class="row-label">${t('billingToken')}</span><span class="row-hint">${
@@ -932,6 +1025,10 @@
       `${providerControl()}
       ${tokenRow}
       ${row('activityTracking', s.activityTracking, t('activityTracking'), t('activityTrackingHint'))}
+      <div class="field"><label class="field-label" for="api-url">${t('apiUrl')}</label>
+        <input class="text" id="api-url" type="url" spellcheck="false" autocomplete="off" data-k="api-url" value="${esc(s.apiUrl || '')}" placeholder="${t(
+          'apiUrlPlaceholder',
+        )}"></div>
       <div class="actions">
         <button class="btn secondary small" data-cmd="openBilling" data-k="act-billing">${icon.external}${t('openBilling')}</button>
         <button class="btn secondary small" data-cmd="openSettings" data-k="act-settings">${icon.sliders}${t('allSettings')}</button>
@@ -939,7 +1036,7 @@
       </div>`,
     );
 
-    return `<div class="grid">${display}${appearance}${budget}${warnings}${copilot}${account}</div>`;
+    return `<div class="grid">${display}${appearance}${budget}${warnings}${copilot}${chat}${account}</div>`;
   }
 
   // ---------------------------------------------------------------- accent
@@ -1093,7 +1190,7 @@
     return `<div class="skeleton" aria-hidden="true">
       <div class="topbar"><span class="sk-line w40"></span></div>
       <div class="card hero sk-hero">${emptyGlyph('sk-glyph')}<span class="sk-line w40 center"></span><span class="sk-line w60 center"></span></div>
-      <div class="tiles">${tile.repeat(4)}</div>
+      <div class="tiles">${tile.repeat(6)}</div>
       <div class="card"><span class="sk-line w40"></span><span class="sk-block"></span></div></div>
       <p class="sr-only" role="status">${t('loading')}</p>`;
   }
@@ -1145,8 +1242,11 @@
         }
       }
     }
-    if (addingThreshold) {
-      const inp = /** @type {HTMLInputElement | null} */ (document.getElementById('th-new'));
+    for (const [on, id] of [
+      [addingThreshold, 'th-new'],
+      [addingModel, 'model-new'],
+    ]) {
+      const inp = on ? /** @type {HTMLInputElement | null} */ (document.getElementById(id)) : null;
       if (inp && document.activeElement !== inp) {
         inp.focus();
       }
@@ -1203,7 +1303,14 @@
 
   function setSetting(key, value) {
     if (model && model.settings) {
-      model.settings[key] = value;
+      const cur = model.settings[key];
+      if (key === 'copilotLanguage' && cur) {
+        cur.enabled = value;
+      } else if (key === 'copilotEagerness' && cur) {
+        cur.value = value;
+      } else {
+        model.settings[key] = value;
+      }
       if (key === 'accent' && model.appearance) {
         // Optimistic: the extension sends the resolved colour with the next model.
         model.appearance.accentColor = resolveColor(String(value));
@@ -1225,6 +1332,25 @@
     const add = app.querySelector('[data-k="th-add"]');
     if (add) {
       /** @type {HTMLElement} */ (add).focus();
+    }
+  }
+
+  function commitModel(input) {
+    const v = input.value.trim();
+    addingModel = false;
+    const list = model.settings.preferredModels || [];
+    if (v && !list.includes(v)) {
+      setSetting('preferredModels', list.concat(v));
+    } else {
+      render();
+    }
+    focusKey('model-add');
+  }
+
+  function focusKey(k) {
+    const el = app.querySelector(`[data-k="${k}"]`);
+    if (el) {
+      /** @type {HTMLElement} */ (el).focus();
     }
   }
 
@@ -1250,7 +1376,8 @@
         setSetting(set, el.getAttribute('aria-checked') !== 'true');
       } else if (el.getAttribute('role') === 'radio') {
         const v = el.getAttribute('data-value');
-        if (model.settings[set] !== v) {
+        const cur = model.settings[set];
+        if ((cur && typeof cur === 'object' ? cur.value : cur) !== v) {
           setSetting(set, v);
         }
       }
@@ -1276,6 +1403,19 @@
         addingThreshold = true;
         render();
         break;
+      case 'addModel':
+        addingModel = true;
+        render();
+        break;
+      case 'removeModel': {
+        const v = el.getAttribute('data-value');
+        setSetting(
+          'preferredModels',
+          (model.settings.preferredModels || []).filter((x) => x !== v),
+        );
+        focusKey('model-add');
+        break;
+      }
       case 'removeThreshold': {
         const v = Number(el.getAttribute('data-value'));
         setSetting(
@@ -1298,6 +1438,7 @@
     const changed = id !== ui.tab;
     ui.tab = id;
     addingThreshold = false;
+    addingModel = false;
     persist();
     if (changed) {
       render();
@@ -1316,6 +1457,21 @@
     const colorKey = el.getAttribute && el.getAttribute('data-color');
     if (colorKey && HEX.test(el.value)) {
       setSetting(colorKey, el.value.toLowerCase());
+      return;
+    }
+    if (el.id === 'refresh-interval') {
+      const v = Number(el.value);
+      if (v > 0 && v !== model.settings.refreshIntervalMinutes) {
+        setSetting('refreshIntervalMinutes', v);
+      }
+      return;
+    }
+    if (el.id === 'api-url') {
+      const v = el.value.trim();
+      el.value = v;
+      if (v !== (model.settings.apiUrl || '')) {
+        setSetting('apiUrl', v);
+      }
       return;
     }
     if (el.id === 'reserve') {
@@ -1344,7 +1500,24 @@
       }
       return;
     }
-    if (el.id === 'reserve' && ev.key === 'Enter') {
+    if (el.id === 'model-new') {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        commitModel(el);
+      } else if (ev.key === 'Escape') {
+        ev.preventDefault();
+        addingModel = false;
+        render();
+        focusKey('model-add');
+      }
+      return;
+    }
+    if ((el.id === 'reserve' || el.id === 'api-url') && ev.key === 'Enter') {
+      el.blur();
+      return;
+    }
+    if (el.id === 'api-url' && ev.key === 'Escape') {
+      /** @type {HTMLInputElement} */ (el).value = model.settings.apiUrl || '';
       el.blur();
       return;
     }
@@ -1385,6 +1558,8 @@
       const el = /** @type {HTMLElement} */ (ev.target);
       if (el && el.id === 'th-new' && addingThreshold) {
         commitThreshold(el);
+      } else if (el && el.id === 'model-new' && addingModel) {
+        commitModel(el);
       }
     },
     true,
