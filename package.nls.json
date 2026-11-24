@@ -52,5 +52,10 @@
   "cfg.activity": "Record active editor time and usage per git branch for the history view. Stays on this computer.",
   "cfg.preferredModels": "Model families `@sparsam` may use, in order of preference (prefix match). Pick models that are included in your plan (0x multiplier). If none is available, `@sparsam` does not answer rather than falling back to a premium model.",
   "chat.description": "Answers with an included model, no premium requests",
-  "chat.btw": "Quick side question with a free model; your main chat stays untouched"
+  "chat.btw": "Quick side question with a free model; your main chat stays untouched",
+  "view.btwContainer": "BTW",
+  "view.btw": "Side questions",
+  "cmd.btw": "Ask a Side Question (btw)",
+  "cmd.btwClear": "Clear Side Questions",
+  "cfg.btwIncludeChat": "Use a snapshot of your most recent Copilot chat (read from VS Code's local chat storage) as context for btw side questions. When off, only the editor is used."
 }

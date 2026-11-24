@@ -1,20 +1,13 @@
 import * as vscode from 'vscode';
-import { availableFamilies, chooseModel, truncate } from './modelChoice';
+import { truncate } from './modelChoice';
+import { friendlyError, noModelMarkdown, pickIncludedModel, PREFERRED_MODELS_SETTING, streamBtwAnswer } from '../btw/answer';
+import { describeBtwContext, gatherBtwContext, SPARSAM_PARTICIPANT_ID } from '../btw/context';
 
-const PARTICIPANT_ID = 'contingentWatcher.sparsam';
-const DEFAULT_PREFERRED = ['gpt-5-mini', 'gpt-4.1', 'gpt-4o'];
+const PARTICIPANT_ID = SPARSAM_PARTICIPANT_ID;
 const MAX_REF_CHARS = 8000;
 
-function preferredModels(): string[] {
-  const v = vscode.workspace.getConfiguration('contingentWatcher').get<string[]>('chat.preferredModels');
-  return Array.isArray(v) && v.length > 0 ? v.filter((s) => typeof s === 'string') : DEFAULT_PREFERRED;
-}
-
-function systemPrompt(btw: boolean): string {
+function systemPrompt(): string {
   const base = vscode.l10n.t('You are a concise, helpful coding assistant. Answer in the same language as the user.');
-  if (btw) {
-    return `${base} Keep the answer to at most ~120 words unless code is needed.`;
-  }
   return (
     `${base} Be concise. If the question clearly needs deep reasoning or a large refactoring, ` +
     `say so in one line and suggest switching to a premium model.`
@@ -67,42 +60,30 @@ function historyMessages(context: vscode.ChatContext): vscode.LanguageModelChatM
   return out;
 }
 
-export function registerSparsam(context: vscode.ExtensionContext): vscode.Disposable {
+export function registerSparsam(context: vscode.ExtensionContext, log?: vscode.LogOutputChannel): vscode.Disposable {
   const handler: vscode.ChatRequestHandler = async (request, chatContext, response, token) => {
     const btw = request.command === 'btw';
-
-    let models: vscode.LanguageModelChat[];
-    try {
-      models = await vscode.lm.selectChatModels({ vendor: 'copilot' });
-    } catch (err) {
-      response.markdown(vscode.l10n.t('Could not list Copilot models: {0}', errMessage(err)));
+    if (btw && !request.prompt.trim()) {
+      response.markdown(vscode.l10n.t('Type your side question after `/btw`.'));
       return {};
     }
-    const model = chooseModel(models, preferredModels());
-    if (!model) {
-      const fams = availableFamilies(models);
-      response.markdown(
-        vscode.l10n.t(
-          'None of your preferred included models is available, so I did not answer, to avoid using a premium request by accident.'
-        ) +
-          '\n\n' +
-          vscode.l10n.t('Available model families: {0}', fams.length ? fams.map((f) => `\`${f}\``).join(', ') : '–') +
-          '\n\n' +
-          vscode.l10n.t('Set your preferred families in the setting `contingentWatcher.chat.preferredModels`.') +
-          '\n\n'
-      );
+
+    const pick = await pickIncludedModel();
+    if (pick.kind === 'error') {
+      response.markdown(pick.message);
+      return {};
+    }
+    if (pick.kind === 'none') {
+      response.markdown(noModelMarkdown(pick.families) + '\n\n');
       response.button({
         title: vscode.l10n.t('Open settings'),
         command: 'workbench.action.openSettings',
-        arguments: ['contingentWatcher.chat.preferredModels'],
+        arguments: [PREFERRED_MODELS_SETTING],
       });
       return {};
     }
+    const model = pick.model;
 
-    const messages: vscode.LanguageModelChatMessage[] = [vscode.LanguageModelChatMessage.User(systemPrompt(btw))];
-    if (!btw) {
-      messages.push(...historyMessages(chatContext));
-    }
     const refTexts: string[] = [];
     for (const ref of request.references) {
       const t = await readReference(ref);
@@ -110,6 +91,39 @@ export function registerSparsam(context: vscode.ExtensionContext): vscode.Dispos
         refTexts.push(t);
       }
     }
+
+    if (btw) {
+      // Same context and instruction as the btw panel, so both entry points behave identically.
+      const ctx = await gatherBtwContext(context, { log: log ? (m) => log.info(m) : undefined });
+      if (refTexts.length) {
+        ctx.references = refTexts;
+      }
+      const res = await streamBtwAnswer(
+        model,
+        request.prompt,
+        ctx,
+        (fragment) => response.markdown(fragment),
+        token,
+        vscode.l10n.t("@sparsam uses an included model so simple questions don't use premium requests"),
+      );
+      if (res.kind === 'error') {
+        response.markdown(res.message);
+      }
+      if (res.kind !== 'done') {
+        return {};
+      }
+      response.markdown(
+        '\n\n_' +
+          vscode.l10n.t('Context: {0}', describeBtwContext(ctx)) +
+          ' · ' +
+          vscode.l10n.t('Answered with {0} (included model) · no premium requests', model.name) +
+          '_',
+      );
+      return {};
+    }
+
+    const messages: vscode.LanguageModelChatMessage[] = [vscode.LanguageModelChatMessage.User(systemPrompt())];
+    messages.push(...historyMessages(chatContext));
     const prompt = refTexts.length ? `${refTexts.join('\n\n')}\n\n${request.prompt}` : request.prompt;
     messages.push(vscode.LanguageModelChatMessage.User(prompt));
 
@@ -140,7 +154,7 @@ export function registerSparsam(context: vscode.ExtensionContext): vscode.Dispos
     response.markdown(
       '\n\n_' + vscode.l10n.t('Answered with {0} (included model) · no premium requests', model.name) + '_'
     );
-    if (!btw && request.prompt.trim()) {
+    if (request.prompt.trim()) {
       response.button({
         title: vscode.l10n.t('Ask a premium model instead'),
         command: 'workbench.action.chat.open',
@@ -153,24 +167,4 @@ export function registerSparsam(context: vscode.ExtensionContext): vscode.Dispos
   const participant = vscode.chat.createChatParticipant(PARTICIPANT_ID, handler);
   participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'media', 'activitybar.svg');
   return participant;
-}
-
-function errMessage(err: unknown): string {
-  return err instanceof Error ? err.message : String(err);
-}
-
-function friendlyError(err: unknown): string {
-  if (err instanceof vscode.LanguageModelError) {
-    switch (err.code) {
-      case vscode.LanguageModelError.NoPermissions.name:
-        return vscode.l10n.t('Permission to use the model was not granted. Ask again and allow access when prompted.');
-      case vscode.LanguageModelError.Blocked.name:
-        return vscode.l10n.t('The request was blocked (content filter or quota).');
-      case vscode.LanguageModelError.NotFound.name:
-        return vscode.l10n.t('The model was not found. It may have been retired; check your preferred models setting.');
-      default:
-        return vscode.l10n.t('The model request failed: {0}', err.message);
-    }
-  }
-  return vscode.l10n.t('The model request failed: {0}', errMessage(err));
 }

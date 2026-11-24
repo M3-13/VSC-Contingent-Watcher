@@ -18,6 +18,7 @@ import { ActivityTracker } from './activityTracker';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
 import { registerSparsam } from './chat/sparsam';
+import { BtwViewProvider, btwCommand } from './btw/btwView';
 import { resolveColor } from './core/appearance';
 import { expectedSurplus } from './core/surplus';
 
@@ -414,13 +415,18 @@ export function activate(context: vscode.ExtensionContext): void {
   const state = new State(context.globalState);
   const log = vscode.window.createOutputChannel('Copilot Contingent', { log: true });
   const ctl = new Controller(context, state, log);
+  const btw = new BtwViewProvider(context, log);
   const openDashboard = () => vscode.commands.executeCommand(`${DashboardViewProvider.viewId}.focus`);
 
   context.subscriptions.push(
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
-    registerSparsam(context),
+    registerSparsam(context, log),
+    btw,
+    vscode.window.registerWebviewViewProvider(BtwViewProvider.viewId, btw),
+    vscode.commands.registerCommand('contingentWatcher.btw', () => btwCommand(btw)),
+    vscode.commands.registerCommand('contingentWatcher.btw.clear', () => btw.clear()),
     vscode.commands.registerCommand('contingentWatcher.askSparsam', () => ctl.onDashboardCommand('askSparsam')),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),

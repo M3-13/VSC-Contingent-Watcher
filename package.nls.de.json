@@ -52,5 +52,10 @@
   "cfg.activity": "Aktive Editor-Zeit und Verbrauch pro Git-Branch für den Verlauf aufzeichnen. Bleibt auf diesem Rechner.",
   "cfg.preferredModels": "Modellfamilien, die `@sparsam` nutzen darf, in Reihenfolge (Präfix-Treffer). Wähle Modelle, die in deinem Plan inklusive sind (Multiplikator 0x). Ist keines verfügbar, antwortet `@sparsam` nicht, statt auf ein Premium-Modell auszuweichen.",
   "chat.description": "Antwortet mit einem inklusiven Modell, ohne Premium-Requests",
-  "chat.btw": "Schnelle Zwischenfrage mit einem Gratis-Modell; dein Haupt-Chat bleibt unberührt"
+  "chat.btw": "Schnelle Zwischenfrage mit einem Gratis-Modell; dein Haupt-Chat bleibt unberührt",
+  "view.btwContainer": "BTW",
+  "view.btw": "Nebenfragen",
+  "cmd.btw": "Nebenfrage stellen (btw)",
+  "cmd.btwClear": "Nebenfragen leeren",
+  "cfg.btwIncludeChat": "Nutze einen Schnappschuss deines letzten Copilot-Chats (aus dem lokalen Chat-Speicher von VS Code) als Kontext für btw-Nebenfragen. Wenn aus, wird nur der Editor verwendet."
 }
