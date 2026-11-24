@@ -37,7 +37,7 @@ export function dashboardStrings(): Record<string, string> {
     // btw
     askBtw: vscode.l10n.t('Ask btw'),
     btwStrip: vscode.l10n.t('Type @btw in Copilot Chat for a quick side question'),
-    btwTitle: vscode.l10n.t('Side questions with btw'),
+    btwTitle: vscode.l10n.t('Side questions with @btw'),
     btwText: vscode.l10n.t("Type @btw in Copilot Chat for a quick side question. It knows your chat and editor, and isn't mixed into your main task."),
     btwModelInfoChat: vscode.l10n.t('Answered by the same model as your chat, so it costs what that model costs.'),
     btwModelInfoFree: vscode.l10n.t('Answered by a free included model, so it uses none of your allowance.'),
@@ -125,12 +125,9 @@ export function dashboardStrings(): Record<string, string> {
     openBilling: vscode.l10n.t('Open GitHub billing'),
 
     // Tips
-    tips: vscode.l10n.t('Saving tips'),
-    relevantNow: vscode.l10n.t('relevant now'),
-    prevTip: vscode.l10n.t('Previous tip'),
-    nextTip: vscode.l10n.t('Next tip'),
-    tipCounter: vscode.l10n.t('{0} of {1}'),
-    allTips: vscode.l10n.t('All tips'),
+    tipsNow: vscode.l10n.t('Right now for you'),
+    tipsNone: vscode.l10n.t("No tips right now. You're on track."),
+    surplusChip: vscode.l10n.t('End of month: allowance left'),
     openGuide: vscode.l10n.t('Open guide'),
 
     // Settings

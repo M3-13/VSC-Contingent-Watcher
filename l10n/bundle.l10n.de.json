@@ -328,5 +328,9 @@
   "Type your side question after `@btw`, e.g. `@btw what does this regex match?`": "Schreib deine Nebenfrage hinter `@btw`, z. B. `@btw was matcht dieser Regex?`",
   "Reading your chat and editor…": "Lese deinen Chat und Editor…",
   "side question": "Nebenfrage",
-  "{0} requests": "{0} Anfragen"
+  "{0} requests": "{0} Anfragen",
+  "Right now for you": "Gerade jetzt für dich",
+  "No tips right now. You're on track.": "Gerade keine Tipps. Du liegst im Plan.",
+  "End of month: allowance left": "Monatsende: Kontingent übrig",
+  "Side questions with @btw": "Nebenfragen mit @btw"
 }

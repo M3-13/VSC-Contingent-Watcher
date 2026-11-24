@@ -193,11 +193,6 @@ button { font: inherit; color: inherit; }
   background: currentColor;
   animation: pulse 1.6s ease-in-out infinite;
 }
-.badge-accent {
-  background: color-mix(in srgb, var(--purple) 18%, transparent);
-  color: color-mix(in srgb, var(--purple) 70%, var(--fg));
-}
-
 /* ------------------------------------------------------------ layout */
 
 .topbar {
@@ -651,58 +646,31 @@ button { font: inherit; color: inherit; }
 
 /* ------------------------------------------------------------ tips */
 
-.tip-card {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--purple) 10%, transparent), transparent 60%),
-    var(--card-bg);
+.tips-now { display: grid; gap: 8px; align-content: start; }
+.tips-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+  padding: 2px 2px 0;
 }
-.tip-card .card-head h2 .i { color: color-mix(in srgb, var(--yellow) 80%, var(--fg)); }
-.tip-nav { display: flex; align-items: center; gap: 2px; }
-.tip-count {
-  margin-right: 4px;
-  font-size: 11px;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.tip-body { display: grid; justify-items: start; gap: 6px; }
-.tip-text {
-  font-size: 13px;
-  line-height: 1.5;
-  text-wrap: pretty;
-}
-.tip-foot { margin-top: 10px; }
-
-.tip-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 2px;
-}
-.tip-list li {
+.tips-head h2 { font-size: 13px; font-weight: 600; }
+.tips-head .chip { font-size: 11px; font-weight: 500; padding: 1px 8px 1px 7px; gap: 5px; }
+.tips-head .chip .i { width: 12px; height: 12px; }
+.tip-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tip-item {
   display: grid;
   grid-template-columns: 16px 1fr;
-  gap: 6px;
-  padding: 6px 6px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  line-height: 1.45;
+  gap: 8px;
+  padding: 10px 12px;
 }
-.tip-list li.current { background: color-mix(in srgb, var(--fg) 5%, transparent); }
-.li-mark { display: grid; place-items: center; height: 17px; }
-.li-mark .i { width: 12px; height: 12px; color: var(--purple); }
-.li-mark .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); opacity: 0.7; }
-
-.count {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  font-size: 10px;
-  line-height: 16px;
-  text-align: center;
-  background: color-mix(in srgb, var(--fg) 10%, transparent);
-  color: var(--muted);
-}
+.tip-icon { display: grid; place-items: center; height: 19px; color: color-mix(in srgb, var(--yellow) 80%, var(--fg)); }
+.tip-icon .i { width: 14px; height: 14px; }
+.tip-text { font-size: 12.5px; line-height: 1.5; text-wrap: pretty; }
+.tips-none { display: flex; align-items: center; gap: 6px; padding: 4px 2px; font-size: 12.5px; }
+.tips-none .i { width: 14px; height: 14px; color: var(--green); }
+.tip-foot { display: flex; justify-content: center; margin-top: 14px; }
 
 /* ------------------------------------------------------------ settings */
 
@@ -1318,8 +1286,6 @@ body.vscode-high-contrast-light {
 }
 body.vscode-high-contrast .hero,
 body.vscode-high-contrast-light .hero,
-body.vscode-high-contrast .tip-card,
-body.vscode-high-contrast-light .tip-card { background: transparent; }
 body.vscode-high-contrast .chip,
 body.vscode-high-contrast-light .chip,
 body.vscode-high-contrast .badge,

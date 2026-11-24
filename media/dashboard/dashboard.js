@@ -22,12 +22,10 @@
   const saved = safe(() => vscode.getState()) || {};
   const ui = {
     tab: TABS.includes(saved.tab) ? saved.tab : 'overview',
-    tipId: /** @type {string | undefined} */ (saved.tipId),
-    tipAt: Number(saved.tipAt) || 0,
   };
 
   function persist() {
-    safe(() => vscode.setState({ tab: ui.tab, tipId: ui.tipId, tipAt: ui.tipAt }));
+    safe(() => vscode.setState({ tab: ui.tab }));
   }
 
   /** Mirrors ACCENT_PRESETS in src/core/appearance.ts. */
@@ -174,8 +172,6 @@
     log: S('<rect x="2" y="2.75" width="12" height="10.5" rx="2"/><path d="M5 6.5l2 1.5-2 1.5M8.5 10h2.5"/>'),
     external: S('<path d="M9.5 2.5h4v4M13.5 2.5 8 8M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"/>'),
     chevron: S('<path d="M6 3.75 10.25 8 6 12.25"/>', 'chev'),
-    left: S('<path d="M10 3.75 5.75 8 10 12.25"/>'),
-    right: S('<path d="M6 3.75 10.25 8 6 12.25"/>'),
     bulb: S('<path d="M6 12.25h4M6.5 14.25h3M8 1.75a4.25 4.25 0 0 0-2.5 7.7c.4.3.75.85.75 1.35v.2h3.5v-.2c0-.5.35-1.05.75-1.35A4.25 4.25 0 0 0 8 1.75z"/>'),
     spark: `<svg class="i spark" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="currentColor" d="${SPARK_PATH}"/></svg>`,
     account: S('<circle cx="8" cy="5.5" r="2.75"/><path d="M2.75 14c.6-2.6 2.7-4 5.25-4s4.65 1.4 5.25 4"/>'),
@@ -553,56 +549,24 @@
       <button class="btn secondary" data-cmd="openBilling" data-k="ov-billing">${icon.external}${t('openBilling')}</button></section>`;
   }
 
-  function orderedTips() {
-    const tips = (model.tips || []).slice();
-    return tips.filter((x) => x.relevant).concat(tips.filter((x) => !x.relevant));
-  }
-
-  function currentTipIndex(tips) {
-    const fresh = Date.now() - ui.tipAt < 6 * 3600 * 1000;
-    const i = fresh && ui.tipId ? tips.findIndex((x) => x.id === ui.tipId) : -1;
-    return i >= 0 ? i : 0;
-  }
-
-  function tipsCard() {
-    const tips = orderedTips();
-    if (tips.length === 0 || !model.settings.tipsEnabled) {
-      return '';
-    }
-    const i = currentTipIndex(tips);
-    const tip = tips[i];
-    return `<section class="card tip-card ${tip.relevant ? 'relevant' : ''}" aria-labelledby="tip-title">
-      <div class="card-head"><h2 id="tip-title">${icon.bulb}${t('tips')}</h2>
-        <div class="tip-nav">
-          <span class="tip-count" aria-hidden="true">${t('tipCounter', i + 1, tips.length)}</span>
-          <button class="icon-btn" data-action="tipPrev" data-k="tip-prev" title="${t('prevTip')}" aria-label="${t('prevTip')}">${icon.left}</button>
-          <button class="icon-btn" data-action="tipNext" data-k="tip-next" title="${t('nextTip')}" aria-label="${t('nextTip')}">${icon.right}</button>
-        </div></div>
-      <div class="tip-body" aria-live="polite">
-        ${tip.relevant ? `<span class="badge badge-accent">${icon.spark}${t('relevantNow')}</span>` : ''}
-        <p class="tip-text"><span class="sr-only">${t('tipCounter', i + 1, tips.length)}: </span>${esc(tip.text)}</p>
-      </div>
-    </section>`;
-  }
-
-  function allTipsCard() {
-    const tips = orderedTips();
-    if (tips.length === 0) {
-      return '';
-    }
-    const cur = model.settings.tipsEnabled ? tips[currentTipIndex(tips)].id : '';
-    const items = tips
-      .map(
-        (x) => `<li class="${x.relevant ? 'relevant' : ''} ${x.id === cur ? 'current' : ''}">
-        <span class="li-mark">${x.relevant ? icon.spark : '<span class="dot"></span>'}</span><span>${esc(x.text)}${
-          x.relevant ? ` <span class="sr-only">(${t('relevantNow')})</span>` : ''
-        }</span></li>`,
-      )
-      .join('');
-    return `<section class="card" aria-labelledby="all-tips-title">
-      <div class="card-head"><h2 id="all-tips-title">${icon.bulb}${t(model.settings.tipsEnabled ? 'allTips' : 'tips')}</h2><span class="count">${tips.length}</span></div>
-      <ul class="tip-list">${items}</ul>
-      <div class="tip-foot"><button class="link" data-cmd="openWalkthrough" data-k="guide2">${icon.book}${t('openGuide')}</button></div></section>`;
+  /** Tips tab: only the tips relevant right now (the extension pre-filters and sorts them). */
+  function tipsNow() {
+    const tips = model.tips || [];
+    const f = model.forecast;
+    // Context: the surplus hint near reset wins over the pace status.
+    const ctx = model.surplus
+      ? `<span class="chip st-ahead">${icon.gift}${t('surplusChip')}</span>`
+      : f && f.statusLabel
+        ? `<span class="chip st-${esc(f.status)}"><span class="chip-dot"></span>${esc(f.statusLabel)}</span>`
+        : '';
+    const body =
+      tips.length === 0
+        ? `<p class="tips-none muted">${icon.check}${t('tipsNone')}</p>`
+        : `<ul class="tip-cards">${tips
+            .map((x) => `<li class="card tip-item"><span class="tip-icon">${icon.bulb}</span><p class="tip-text">${esc(x.text)}</p></li>`)
+            .join('')}</ul>`;
+    return `<section class="tips-now" aria-labelledby="tips-now-title">
+      <div class="tips-head"><h2 id="tips-now-title">${t('tipsNow')}</h2>${ctx}</div>${body}</section>`;
   }
 
   /** Tips tab: what btw is and which model answers. */
@@ -1182,7 +1146,8 @@
   }
 
   function tipsPanel() {
-    return `<div class="grid">${tipsCard()}${btwCard()}${allTipsCard()}</div>`;
+    return `<div class="grid">${tipsNow()}${btwCard()}</div>
+      <div class="tip-foot"><button class="link subtle" data-cmd="openWalkthrough" data-k="guide">${icon.book}${t('openGuide')}</button></div>`;
   }
 
   function panel() {
@@ -1442,17 +1407,6 @@
       case 'enableActivity':
         setSetting('activityTracking', true);
         break;
-      case 'tipPrev':
-      case 'tipNext': {
-        const tips = orderedTips();
-        const i = currentTipIndex(tips);
-        const next = (i + (action === 'tipNext' ? 1 : -1) + tips.length) % tips.length;
-        ui.tipId = tips[next].id;
-        ui.tipAt = Date.now();
-        persist();
-        render();
-        break;
-      }
       case 'addThreshold':
         addingThreshold = true;
         render();
