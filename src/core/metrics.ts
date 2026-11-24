@@ -10,8 +10,37 @@ export interface UsageMetrics {
   buffer: number;
   bufferDays: number;
   streakDays: number;
-  daily: { date: string; used: number; weekend: boolean; estimated: boolean }[];
+  daily: { date: string; used: number; weekend: boolean; estimated: boolean; exhausted: boolean }[];
   planPerDay: number;
+  demand?: Demand;
+}
+
+/** Estimated monthly need at the observed pace (independent of the allowance cap). */
+export interface Demand {
+  /** What the whole cycle would need at the pace observed so far. */
+  estimate: number;
+  /** estimate minus allowance (positive = allowance too small). */
+  overBy: number;
+  /** When the allowance ran out (ISO), if it did. */
+  exhaustedOn?: string;
+}
+
+/** First time the usage curve reaches `level` (binary search; curve is monotonic). */
+function timeReaching(at: (t: number) => number, from: number, to: number, level: number): number | undefined {
+  if (at(to) < level) {
+    return undefined;
+  }
+  let lo = from;
+  let hi = to;
+  for (let i = 0; i < 40 && hi - lo > 60_000; i++) {
+    const mid = (lo + hi) / 2;
+    if (at(mid) >= level) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+  return hi;
 }
 
 function localDayStart(t: number): number {
@@ -95,6 +124,8 @@ export function computeMetrics(
       used: Math.max(0, at(to) - at(from)),
       weekend: wd === 0 || wd === 6,
       estimated: to <= firstReal,
+      // Nothing left to spend from the start of this day on.
+      exhausted: snap.entitlement > 0 && at(from) >= snap.entitlement - 1e-6,
     });
   }
 
@@ -103,7 +134,8 @@ export function computeMetrics(
   let streakDays = 0;
   for (let i = daily.length - 2; i >= 0; i--) {
     const day = daily[i];
-    if (day.estimated) {
+    // An empty allowance isn't "staying within budget": it ends the streak.
+    if (day.estimated || day.exhausted) {
       break;
     }
     if (!opts.countWeekends && day.weekend && day.used === 0) {
@@ -115,5 +147,33 @@ export function computeMetrics(
     streakDays++;
   }
 
-  return { today, last7Days, cycleAverage, buffer, bufferDays, streakDays, daily, planPerDay };
+  return { today, last7Days, cycleAverage, buffer, bufferDays, streakDays, daily, planPerDay, demand: estimateDemand() };
+
+  function estimateDemand(): Demand | undefined {
+    if (snap.unlimited || snap.entitlement <= 0) {
+      return undefined;
+    }
+    let rate: number | undefined;
+    let exhaustedOn: number | undefined;
+    if (snap.overageCount > 0) {
+      // Paid overage: real usage keeps counting beyond the allowance.
+      rate = elapsedDays >= 1 ? (snap.used + snap.overageCount) / elapsedDays : undefined;
+    } else if (snap.remaining <= 0) {
+      // Capped at the allowance: use the pace until it ran out.
+      exhaustedOn = timeReaching(at, start, now, snap.entitlement - 1e-6);
+      const days = exhaustedOn !== undefined ? budgetDays(start, exhaustedOn, opts.countWeekends) : 0;
+      rate = days >= 0.5 ? snap.entitlement / days : undefined;
+    } else {
+      rate = elapsedDays >= 1 ? snap.used / elapsedDays : undefined;
+    }
+    if (rate === undefined) {
+      return undefined;
+    }
+    const estimate = Math.max(snap.used, rate * totalDays);
+    return {
+      estimate,
+      overBy: estimate - snap.entitlement,
+      exhaustedOn: exhaustedOn !== undefined ? new Date(exhaustedOn).toISOString() : undefined,
+    };
+  }
 }

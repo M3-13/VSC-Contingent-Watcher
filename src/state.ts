@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { addCycle, CycleSummary, summarizeCycle } from './core/cycles';
 import { compact } from './core/history';
 import { cycleKey } from './core/thresholds';
 import { HistoryPoint, QuotaSnapshot } from './core/types';
@@ -8,6 +9,8 @@ const K_LAST = 'lastSnapshot';
 const K_NOTIFIED = 'notified';
 const K_SNOOZE = 'snoozeUntil';
 const K_PACE_DAY = 'paceWarnedDay';
+const K_CYCLES = 'cycles';
+const K_SURPLUS = 'surplusNotified';
 
 interface NotifiedState {
   cycle: string;
@@ -31,7 +34,10 @@ export class State {
     const prev = this.last;
     let history = this.history;
     const newCycle = prev && (cycleKey(prev.resetDate) !== cycleKey(snap.resetDate) || snap.used < prev.used);
-    if (newCycle) {
+    if (newCycle && prev) {
+      // Archive the finished cycle before its history is dropped.
+      const summary = summarizeCycle(prev, history, { countWeekends: true, reserve: 0 }, prev.fetchedAt);
+      await this.mem.update(K_CYCLES, addCycle(this.cycles, summary));
       history = [];
     }
     const lastPt = history[history.length - 1];
@@ -42,6 +48,18 @@ export class State {
     history = compact(history, snap.fetchedAt);
     await this.mem.update(K_HISTORY, history);
     await this.mem.update(K_LAST, snap);
+  }
+
+  get cycles(): CycleSummary[] {
+    return this.mem.get<CycleSummary[]>(K_CYCLES, []);
+  }
+
+  surplusNotified(resetDate: string): boolean {
+    return this.mem.get<string>(K_SURPLUS) === cycleKey(resetDate);
+  }
+
+  async markSurplusNotified(resetDate: string): Promise<void> {
+    await this.mem.update(K_SURPLUS, cycleKey(resetDate));
   }
 
   notifiedThresholds(resetDate: string): number[] {

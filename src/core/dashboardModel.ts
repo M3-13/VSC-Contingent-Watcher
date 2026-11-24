@@ -59,11 +59,81 @@ export interface DashboardModel {
     streakDays: number;
     /** Usage per calendar day of the current cycle, oldest first, incl. today. */
     /** estimated = before the first recorded data point (spread linearly). */
-    daily: { date: string; used: number; weekend: boolean; estimated: boolean }[];
+    /** exhausted = allowance was already empty at the start of that day. */
+    daily: { date: string; used: number; weekend: boolean; estimated: boolean; exhausted: boolean }[];
     /** Budget per day for the chart reference line (entitlement / budget days of cycle). */
     planPerDay: number;
+    /**
+     * Estimated need for the whole cycle at the observed pace, also when the
+     * allowance already ran out ("how much would I have needed to get by?").
+     * Undefined with too little data. planPerDay is the max/day to get by.
+     */
+    demand?: { estimate: number; overBy: number; exhaustedOn?: string };
   };
   tips: { id: string; text: string; relevant: boolean }[];
+  /** Visual customisation. */
+  appearance: {
+    /** CSS colour for the gauge/accent; undefined = theme default (charts colours). */
+    accentColor?: string;
+  };
+  /**
+   * Set near the end of a cycle when a noticeable part of the allowance will
+   * likely expire unused ("use it or lose it").
+   */
+  surplus?: {
+    /** Requests/credits expected to remain unused at reset. */
+    expectedUnused: number;
+    /** Translated one-line message ready to display. */
+    message: string;
+  };
+  /** Usage per model from the official billing API (opt-in, needs a token). */
+  models: {
+    state: 'notConfigured' | 'loading' | 'ok' | 'error';
+    errorMessage?: string;
+    /** Sorted by quantity, descending. share is 0..1 of the total. */
+    /** credits is set when the report has amounts (1 credit = $0.01); share is by credits then. */
+    items: { model: string; quantity: number; credits?: number; share: number }[];
+    /** e.g. "November 2026". */
+    periodLabel?: string;
+    /** True when items carry credits (show credits instead of request counts). */
+    showCredits?: boolean;
+  };
+  /** Month-over-month review from archived cycles (newest first, max 6). */
+  review: {
+    cycles: {
+      /** Cycle label, e.g. "Oktober 2026". */
+      label: string;
+      used: number;
+      entitlement: number;
+      /** Average per active day. */
+      avgPerActiveDay: number;
+      activeDays: number;
+      peakDay?: { date: string; used: number };
+      /** Estimated need for that cycle at its pace (may exceed entitlement). */
+      demand?: number;
+      /** True for the running cycle (partial data). */
+      current: boolean;
+    }[];
+  };
+  /** What was worked on and how long it took (per git branch, active time only). */
+  activity: {
+    enabled: boolean;
+    items: {
+      id: string;
+      /** Human-readable title (branch name, or "main · 24 Nov"). */
+      title: string;
+      /** Last commit message on that branch, if known. */
+      detail?: string;
+      repo: string;
+      /** Epoch ms of first and last activity. */
+      start: number;
+      end: number;
+      activeMinutes: number;
+      /** Quota used while this item was active. */
+      used: number;
+      active: boolean;
+    }[];
+  };
   settings: {
     display: 'remaining' | 'used' | 'percent' | 'dailyBudget';
     countWeekends: boolean;
@@ -78,6 +148,38 @@ export interface DashboardModel {
     /** Copilot's own toggles (undefined if Copilot is not installed). */
     copilotCompletions?: boolean;
     copilotNextEdit?: boolean;
+    /** Accent preset id or a #hex colour. */
+    accent: string;
+    /** Status bar icon style. */
+    statusBarIcon: 'gauge' | 'battery' | 'ring' | 'bars' | 'none';
+    /** Status bar text/icon colour: 'auto' or a #hex colour. */
+    statusBarColor: string;
+    surplusHint: boolean;
+    activityTracking: boolean;
+    billingTokenSet: boolean;
+    refreshIntervalMinutes: number;
+    alignment: 'left' | 'right';
+    /** Optional API base URL override (empty = automatic). */
+    apiUrl: string;
+    /** Which model btw uses: the current chat model or a free (included) model. */
+    btwModel: 'chat' | 'included';
+    /** Where the btw answer window opens. */
+    btwOpenIn: 'side' | 'window';
+    /** Which quota to show if GitHub reports both: credits (usage-based) or requests. */
+    unit: 'auto' | 'credits' | 'requests';
+    /** Included model families btw may use in 'included' mode, in order. */
+    preferredModels: string[];
+    /** Include the current Copilot chat conversation as btw context. */
+    btwIncludeChat: boolean;
+    /**
+     * Copilot's own options, discovered at runtime from the installed Copilot
+     * extension (undefined = not available in this Copilot version).
+     */
+    copilotEagerness?: { value: string; options: string[] };
+    /** Completions for the language of the active editor. */
+    copilotLanguage?: { id: string; label: string; enabled: boolean };
+    /** Copilot offers a "snooze completions" command. */
+    copilotSnoozeAvailable: boolean;
   };
 }
 
@@ -92,7 +194,12 @@ export type DashboardCommand =
   | 'openChat'
   | 'snooze'
   | 'unsnooze'
-  | 'openWalkthrough';
+  | 'openWalkthrough'
+  | 'configureBillingToken'
+  | 'clearBillingToken'
+  | 'clearActivity'
+  | 'btw'
+  | 'snoozeCompletions';
 
 /** Settings the webview may change directly. */
 export type DashboardSettingKey =
@@ -105,7 +212,22 @@ export type DashboardSettingKey =
   | 'tipsEnabled'
   | 'authProvider'
   | 'copilotCompletions'
-  | 'copilotNextEdit';
+  | 'copilotNextEdit'
+  | 'accent'
+  | 'statusBarIcon'
+  | 'statusBarColor'
+  | 'surplusHint'
+  | 'activityTracking'
+  | 'refreshIntervalMinutes'
+  | 'alignment'
+  | 'apiUrl'
+  | 'preferredModels'
+  | 'btwModel'
+  | 'btwOpenIn'
+  | 'unit'
+  | 'btwIncludeChat'
+  | 'copilotEagerness'
+  | 'copilotLanguage';
 
 export type WebviewMessage =
   | { type: 'ready' }

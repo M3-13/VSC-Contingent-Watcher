@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { Config } from './config';
+import { expectedSurplus } from './core/surplus';
 import { newlyCrossedThreshold } from './core/thresholds';
 import { Forecast, QuotaSnapshot } from './core/types';
-import { fmt, fmtDate, unitLabel } from './format';
+import { fmt, fmtDate, surplusMessage, unitLabel } from './format';
 import { State } from './state';
 
 /** Shows at most one notification per refresh, never twice for the same event. */
@@ -40,6 +41,13 @@ export async function maybeNotify(snap: QuotaSnapshot, f: Forecast, cfg: Config,
       fmt(f.dailyBudget),
     );
     await handle(await vscode.window.showInformationMessage(msg, vscode.l10n.t('Saving tips'), vscode.l10n.t('Snooze 24h')), state);
+    return;
+  }
+
+  const unused = cfg.surplusHint ? expectedSurplus(snap, f) : undefined;
+  if (unused !== undefined && !state.surplusNotified(snap.resetDate)) {
+    await state.markSurplusNotified(snap.resetDate);
+    await handle(await vscode.window.showInformationMessage(surplusMessage(snap, unused), vscode.l10n.t('Details')), state);
   }
 }
 

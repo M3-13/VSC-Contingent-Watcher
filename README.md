@@ -5,11 +5,15 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 ## Was es macht
 
 - Zeigt verbleibendes Kontingent, Verbrauch, Prozent oder Tagesbudget in der Statusleiste. Das Icon zeigt den Füllstand.
-- **Dashboard** (Klick auf die Statusleiste oder das Icon in der Activity Bar) mit diesen Kennzahlen:
-  - Heute, Tagesbudget, Tempo und Puffer gegenüber dem Plan
-  - Prognose zum Reset, Serie der Tage im Budget, letzte 7 Tage
-  - Tagesverlauf als Diagramm
-  - Spartipps, Schnell-Einstellungen und die Copilot-Schalter für Inline-Vorschläge und NES
+- **Dashboard** (Klick auf die Statusleiste oder das Icon in der Activity Bar) mit 4 Tabs:
+  - **Übersicht:** Tachometer, Heute, Tagesbudget, Tempo, Puffer, Prognose, Tagesdiagramm und ein Hinweis gegen Verfall
+  - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit pro Git-Branch, mit Verbrauch), Monatsrückblick, Verbrauch pro Modell
+  - **Tipps:** Spartipps passend zur aktuellen Lage
+  - **Einstellungen:** Anzeige, Warnungen, Budget, Akzentfarbe, Statusleisten-Icon und -Farbe, Copilot-Schalter
+- **`@btw` – Nebenfrage wie in Claude Code:** Tippe in deinem Chat `@btw deine Frage`. Die Antwort erscheint in einem **btw-Fenster neben dem Editor** (oder einem eigenen Fenster). Sie kennt den Verlauf dieses Chats und deinen Editor und nutzt das im Chat gewählte Modell (optional ein Gratis-Modell). Im Chat selbst steht nur eine kurze Zeile. Ohne Warten: `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` öffnet das btw-Fenster mit eigenem Eingabefeld. Fragen dort werden sofort beantwortet, auch während ein Agent im Chat arbeitet.
+- **Credits statt Requests:** Meldet GitHub AI-Credits (nutzungsbasierte Abrechnung), zeigt die Extension Credits an. Das ist einstellbar über `contingentWatcher.unit`.
+- **Bedarf (geschätzt):** wie viel dein Monat bei deinem Tempo gebraucht hätte, auch wenn das Kontingent schon leer ist, und wie viel pro Tag gereicht hätte.
+- **Hinweis gegen Verfall:** In der letzten Monatswoche meldet die Extension, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.
 - Berechnet ein **Tagesbudget** bis zum Reset (optional ohne Wochenenden, mit Reserve).
 - Prognostiziert dein Tempo und zeigt, an welchem Tag das Kontingent bei gleichem Verbrauch leer wäre.
 - Warnt bei Schwellenwerten (z. B. 50/75/90/100 %) und bei zu hohem Tempo.
@@ -37,6 +41,16 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `contingentWatcher.budget.countWeekends` | `false` | Wochenenden als Budgettage zählen. |
 | `contingentWatcher.budget.reserve` | `0` | Reserve, die nicht ins Tagesbudget eingeht. |
 | `contingentWatcher.tips.enabled` | `true` | Spartipp im Tooltip anzeigen. |
+| `contingentWatcher.appearance.accentColor` | `auto` | Akzentfarbe des Tachometers (`teal`, `violet`, `blue`, `green`, `orange`, `pink` oder `#hex`). |
+| `contingentWatcher.statusBar.icon` | `gauge` | Icon-Stil: `gauge`, `battery`, `ring`, `bars`, `none`. |
+| `contingentWatcher.statusBar.color` | `auto` | Farbe des Statusleisten-Eintrags (Vorlage oder `#hex`). |
+| `contingentWatcher.warnings.surplusHint` | `true` | Hinweis, wenn Kontingent ungenutzt verfallen würde. |
+| `contingentWatcher.activity.enabled` | `true` | Aktive Zeit und Verbrauch pro Git-Branch aufzeichnen (nur lokal). |
+| `contingentWatcher.btw.includeChat` | `true` | Den aktuellen Copilot-Chat als Kontext für btw nutzen (lokal gelesen). |
+| `contingentWatcher.unit` | `auto` | Anzeige: `auto` (Credits, wenn vorhanden), `credits` oder `requests`. |
+| `contingentWatcher.btw.openIn` | `side` | Wo das btw-Fenster aufgeht: `side` (neben dem Editor) oder `window` (eigenes Fenster). |
+| `contingentWatcher.btw.model` | `chat` | Modell für btw: `chat` (wie im Chat) oder `included` (Gratis-Modell). |
+| `contingentWatcher.chat.preferredModels` | `gpt-5-mini, gpt-4.1, gpt-4o` | Gratis-Modelle für btw im Modus `included` (nur inklusive Modelle eintragen). |
 
 ## Befehle
 
@@ -49,6 +63,10 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `Copilot Contingent: Mit GitHub anmelden` | Anmeldung anstoßen. |
 | `Copilot Contingent: Warnungen für 24 Stunden stummschalten` | Snooze. |
 
+## Verbrauch pro Modell (optional)
+
+Das zeigt, welches Modell wie viel deines Kontingents verbraucht. Dafür braucht es einen *fine-grained* GitHub-Token mit der Account-Berechtigung **Plan (read)**. Du richtest ihn im Dashboard unter *Verlauf* oder über den Befehl *Verbrauch pro Modell einrichten* ein. Der Token liegt sicher im SecretStorage von VS Code.
+
 ## Enterprise-Accounts & Fehlersuche
 
 - **Copilot Business/Enterprise auf github.com:** Hier ist nichts einzustellen. Es wird der normale GitHub-Login genutzt.
@@ -58,12 +76,16 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 
 ## Spartipps
 
-- Für Routine ein enthaltenes Modell (0x) nutzen, Premium-Modelle für schwierige Probleme aufsparen. Die Modellauswahl zeigt die Kosten.
-- Inline-Vervollständigungen und Next Edit Suggestions kosten kein Kontingent.
-- Für kleine Änderungen Ask/Edit statt Agent-Modus.
-- Kontext gleich mitgeben, Fragen bündeln, pro Thema einen neuen Chat starten.
-- Wiederkehrende Regeln in `.github/copilot-instructions.md` ablegen.
-- In der GitHub-Abrechnung ein Ausgabenlimit setzen.
+Seit Mitte 2026 rechnen viele Pläne Copilot nutzungsbasiert ab, in AI-Credits nach Tokens. Der größte Kostentreiber ist deshalb die Kontextgröße.
+
+- **Neuer Chat pro Aufgabe:** Lange Verläufe werden bei jeder Anfrage mitgeschickt.
+- **Gezielter Kontext:** Häng `#file` oder `#selection` an statt `#codebase`, und füge aus Logs nur die relevanten Zeilen ein.
+- **Weniger Tools:** Aktiviere nur die Tools und MCP-Server, die die Aufgabe braucht.
+- **Passendes Modell:** Nimm das günstigste Modell, das reicht, oder *Auto*. Starke Reasoning-Modelle sind für schwere Probleme da.
+- **Instructions und Prompt-Dateien:** Projektregeln gehören in `.github/copilot-instructions.md`, wiederkehrende Aufgaben in `.prompt.md`-Dateien.
+- **Kostenlos:** Inline-Vorschläge und Next Edit Suggestions verbrauchen kein Kontingent.
+
+Im Dashboard zeigt der Tab *Tipps* immer nur die Tipps, die gerade zu deiner Lage passen. Es sind rund 40, je nach Status, Zeitpunkt im Monat und drohendem Verfall.
 
 ## Entwicklung
 
