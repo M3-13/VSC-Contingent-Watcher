@@ -59,5 +59,9 @@
   "cfg.unit.auto": "Credits if available (usage-based billing), otherwise premium requests",
   "cfg.unit.credits": "Always prefer AI credits",
   "cfg.unit.requests": "Always prefer premium requests",
-  "chat.btw.description": "Ask a quick side question with your chat's context"
+  "chat.btw.description": "Ask a quick side question with your chat's context",
+  "cfg.btwOpenIn": "Where the btw shortcut opens its chat.",
+  "cfg.btwOpenIn.window": "Separate floating window that stays open next to your work",
+  "cfg.btwOpenIn.side": "Split to the right of the editor",
+  "cfg.btwOpenIn.tab": "Normal editor tab"
 }

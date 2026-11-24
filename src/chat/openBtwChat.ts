@@ -11,6 +11,25 @@ const FALLBACK_INFO_KEY = 'contingentWatcher.btw.fallbackInfoShown';
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Where the btw chat opens: floating window, split beside the editor, or a normal tab. */
+type OpenIn = 'window' | 'side' | 'tab';
+
+/** Moves the just-opened (active) chat editor so it stays visible next to your work. */
+async function placeEditor(openIn: OpenIn, log?: vscode.LogOutputChannel): Promise<void> {
+  const command =
+    openIn === 'window' ? 'workbench.action.moveEditorToNewWindow' : openIn === 'side' ? 'workbench.action.moveEditorToRightGroup' : undefined;
+  if (!command) {
+    return;
+  }
+  try {
+    await vscode.commands.executeCommand(command);
+    log?.info(`btw: placed chat tab with ${command}`);
+    await delay(TYPE_DELAY_MS);
+  } catch (err) {
+    log?.warn(`btw: ${command} failed (${errText(err)}); keeping a normal tab`);
+  }
+}
+
 function errText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
@@ -32,6 +51,8 @@ export async function openBtwChat(log?: vscode.LogOutputChannel): Promise<'newTa
       await vscode.commands.executeCommand(id);
       log?.info(`btw: opened a new chat tab with ${id}`);
       await delay(TYPE_DELAY_MS);
+      const openIn = vscode.workspace.getConfiguration('contingentWatcher').get<OpenIn>('btw.openIn', 'window');
+      await placeEditor(openIn, log);
       try {
         // Types into the focused chat input of the new tab.
         await vscode.commands.executeCommand('type', { text: PREFILL });

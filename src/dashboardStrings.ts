@@ -39,6 +39,10 @@ export function dashboardStrings(): Record<string, string> {
     btwStrip: vscode.l10n.t('Type @btw in Copilot Chat for a quick side question'),
     btwTitle: vscode.l10n.t('Side questions with @btw'),
     btwText: vscode.l10n.t("Type @btw in Copilot Chat for a quick side question. It knows your chat and editor, and isn't mixed into your main task."),
+    btwOpenIn: vscode.l10n.t('Open btw in'),
+    btwOpenWindow: vscode.l10n.t('Own window'),
+    btwOpenSide: vscode.l10n.t('Beside editor'),
+    btwOpenTab: vscode.l10n.t('Tab'),
     btwModelInfoChat: vscode.l10n.t('Answered by the same model as your chat, so it costs what that model costs.'),
     btwModelInfoFree: vscode.l10n.t('Answered by a free included model, so it uses none of your allowance.'),
 
@@ -88,7 +92,6 @@ export function dashboardStrings(): Record<string, string> {
     need: vscode.l10n.t('Need (est.)'),
     needTitle: vscode.l10n.t('What this month would need at your pace so far, also after the allowance ran out.'),
     needOver: vscode.l10n.t('+{0} over allowance'),
-    needGetBy: vscode.l10n.t('to get by: max {0}/day'),
     needFits: vscode.l10n.t('fits your allowance'),
     needSpare: vscode.l10n.t('{0} to spare'),
     needNoData: vscode.l10n.t('not enough data yet'),

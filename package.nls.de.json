@@ -59,5 +59,9 @@
   "cfg.unit.auto": "Credits, wenn vorhanden (nutzungsbasierte Abrechnung), sonst Premium-Requests",
   "cfg.unit.credits": "Immer AI-Credits bevorzugen",
   "cfg.unit.requests": "Immer Premium-Requests bevorzugen",
-  "chat.btw.description": "Stell eine kurze Nebenfrage mit dem Kontext deines Chats"
+  "chat.btw.description": "Stell eine kurze Nebenfrage mit dem Kontext deines Chats",
+  "cfg.btwOpenIn": "Wo das btw-Tastenkürzel seinen Chat öffnet.",
+  "cfg.btwOpenIn.window": "Eigenes schwebendes Fenster, das neben deiner Arbeit offen bleibt",
+  "cfg.btwOpenIn.side": "Geteilt rechts neben dem Editor",
+  "cfg.btwOpenIn.tab": "Normaler Editor-Tab"
 }

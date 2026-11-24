@@ -54,6 +54,7 @@ const SETTINGS: Record<DashboardSettingKey, true> = {
   apiUrl: true,
   preferredModels: true,
   btwModel: true,
+  btwOpenIn: true,
   btwIncludeChat: true,
   copilotEagerness: true,
   copilotLanguage: true,

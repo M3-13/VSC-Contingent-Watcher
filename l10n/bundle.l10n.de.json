@@ -279,7 +279,6 @@
   "Need (est.)": "Bedarf (geschätzt)",
   "What this month would need at your pace so far, also after the allowance ran out.": "Was dieser Monat bei deinem bisherigen Tempo bräuchte, auch nachdem das Kontingent aufgebraucht war.",
   "+{0} over allowance": "+{0} über dem Kontingent",
-  "to get by: max {0}/day": "zum Auskommen: max. {0}/Tag",
   "fits your allowance": "passt ins Kontingent",
   "{0} to spare": "{0} übrig",
   "not enough data yet": "noch zu wenig Daten",
@@ -346,5 +345,9 @@
   "Late in the month, batch small questions into one precise prompt and defer large explorations to after the reset.": "Bündele spät im Monat kleine Fragen in einem präzisen Prompt und verschiebe große Erkundungen auf die Zeit nach dem Reset.",
   "You are on track: keep fresh chats, scoped context and cheaper models for routine work, and check usage weekly.": "Du liegst im Plan: Bleib bei frischen Chats, begrenztem Kontext und günstigeren Modellen für Routine, und prüfe die Nutzung wöchentlich.",
   "Check the daily budget in the status bar: it tells you what you can spend today and still get through to the reset.": "Schau auf das Tagesbudget in der Statusleiste: Es sagt dir, wie viel du heute verbrauchen kannst und trotzdem bis zum Reset auskommst.",
-  "Your VS Code version can't open a separate chat tab; @btw was put into the main chat.": "Deine VS-Code-Version kann keinen separaten Chat-Tab öffnen; @btw wurde in den Haupt-Chat eingefügt."
+  "Your VS Code version can't open a separate chat tab; @btw was put into the main chat.": "Deine VS-Code-Version kann keinen separaten Chat-Tab öffnen; @btw wurde in den Haupt-Chat eingefügt.",
+  "Open btw in": "btw öffnen in",
+  "Own window": "Eigenem Fenster",
+  "Beside editor": "Neben dem Editor",
+  "Tab": "Tab"
 }

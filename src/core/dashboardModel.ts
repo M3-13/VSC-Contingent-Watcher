@@ -163,6 +163,8 @@ export interface DashboardModel {
     apiUrl: string;
     /** Which model btw uses: the current chat model or a free (included) model. */
     btwModel: 'chat' | 'included';
+    /** Where the btw shortcut opens its chat. */
+    btwOpenIn: 'window' | 'side' | 'tab';
     /** Which quota to show if GitHub reports both: credits (usage-based) or requests. */
     unit: 'auto' | 'credits' | 'requests';
     /** Included model families btw may use in 'included' mode, in order. */
@@ -221,6 +223,7 @@ export type DashboardSettingKey =
   | 'apiUrl'
   | 'preferredModels'
   | 'btwModel'
+  | 'btwOpenIn'
   | 'unit'
   | 'btwIncludeChat'
   | 'copilotEagerness'

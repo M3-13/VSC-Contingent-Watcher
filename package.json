@@ -451,6 +451,21 @@
           ],
           "default": "auto",
           "markdownDescription": "%cfg.unit%"
+        },
+        "contingentWatcher.btw.openIn": {
+          "type": "string",
+          "enum": [
+            "window",
+            "side",
+            "tab"
+          ],
+          "enumDescriptions": [
+            "%cfg.btwOpenIn.window%",
+            "%cfg.btwOpenIn.side%",
+            "%cfg.btwOpenIn.tab%"
+          ],
+          "default": "window",
+          "markdownDescription": "%cfg.btwOpenIn%"
         }
       }
     },

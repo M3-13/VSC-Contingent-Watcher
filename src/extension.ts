@@ -48,6 +48,7 @@ const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   preferredModels: 'chat.preferredModels',
   btwIncludeChat: 'btw.includeChat',
   btwModel: 'btw.model',
+  btwOpenIn: 'btw.openIn',
   unit: 'unit',
 };
 
@@ -249,6 +250,7 @@ class Controller implements vscode.Disposable {
         preferredModels: own.get<string[]>('chat.preferredModels', ['gpt-5-mini', 'gpt-4.1', 'gpt-4o']),
         btwIncludeChat: own.get<boolean>('btw.includeChat', true),
         btwModel: own.get<string>('btw.model', 'chat') === 'included' ? 'included' : 'chat',
+        btwOpenIn: (['side', 'tab'] as const).find((v) => v === own.get<string>('btw.openIn')) ?? 'window',
         unit: (['credits', 'requests'] as const).find((u) => u === own.get<string>('unit')) ?? 'auto',
         accent: this.cfg.accent,
         statusBarIcon: this.cfg.statusBarIcon,
@@ -440,6 +442,8 @@ class Controller implements vscode.Disposable {
       v = typeof value === 'string' ? value.trim() : '';
     } else if (key === 'unit') {
       v = value === 'credits' || value === 'requests' ? value : 'auto';
+    } else if (key === 'btwOpenIn') {
+      v = value === 'side' || value === 'tab' ? value : 'window';
     } else if (key === 'btwModel') {
       v = value === 'included' ? 'included' : 'chat';
     } else if (key === 'preferredModels') {

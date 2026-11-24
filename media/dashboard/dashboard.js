@@ -400,7 +400,6 @@
       if (dm.exhaustedOn) {
         subs.push(`${icon.warning}${t('emptySince', fmtDate(parseDay(dm.exhaustedOn)))}`);
       }
-      subs.push(t('needGetBy', fmt(m.planPerDay)));
     } else {
       tone = 'good';
       subs.push(t('needFits'));
@@ -1019,6 +1018,16 @@
         ],
         'lbl-btwmodel',
       )}<span class="row-hint">${t(freeModels ? 'btwModelInfoFree' : 'btwModelInfoChat')}</span></div>
+      <div class="field"><span class="field-label" id="lbl-btwopen">${t('btwOpenIn')}</span>${segmented(
+        'btwOpenIn',
+        s.btwOpenIn || 'window',
+        [
+          ['window', t('btwOpenWindow')],
+          ['side', t('btwOpenSide')],
+          ['tab', t('btwOpenTab')],
+        ],
+        'lbl-btwopen',
+      )}</div>
       ${
         freeModels
           ? `<div class="field"><span class="field-label" id="lbl-models">${t('preferredModels')}<span class="field-hint"> · ${t(
