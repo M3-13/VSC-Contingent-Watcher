@@ -3,16 +3,22 @@ import { Config, readConfig, SECTION } from './config';
 import { DashboardCommand, DashboardModel, DashboardSettingKey } from './core/dashboardModel';
 import { computeForecast } from './core/forecast';
 import { computeMetrics } from './core/metrics';
+import { summarizeCycle } from './core/cycles';
 import { TIPS } from './core/tips';
 import { Forecast, QuotaSnapshot } from './core/types';
 import { dashboardStrings } from './dashboardStrings';
 import { DashboardViewProvider } from './dashboardView';
-import { statusLabel, unitLabel } from './format';
+import { fmtDate, surplusMessage, statusLabel, unitLabel } from './format';
 import { maybeNotify } from './notifier';
 import { QuotaService } from './quotaService';
 import { State } from './state';
 import { StatusBar, ViewState } from './statusBar';
 import { ProviderId } from './auth';
+import { ActivityTracker } from './activityTracker';
+import { BillingService } from './billingService';
+import { registerSparsam } from './chat/sparsam';
+import { resolveColor } from './core/appearance';
+import { expectedSurplus } from './core/surplus';
 
 const BILLING_URL = 'https://github.com/settings/billing';
 const COPILOT_SETTINGS_URL = 'https://github.com/settings/copilot';
@@ -28,6 +34,11 @@ const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   paceWarning: 'warnings.paceWarning',
   tipsEnabled: 'tips.enabled',
   authProvider: 'auth.provider',
+  accent: 'appearance.accentColor',
+  statusBarIcon: 'statusBar.icon',
+  statusBarColor: 'statusBar.color',
+  surplusHint: 'warnings.surplusHint',
+  activityTracking: 'activity.enabled',
 };
 
 function copilotInstalled(): boolean {
@@ -43,6 +54,8 @@ class Controller implements vscode.Disposable {
   private view: ViewState = { kind: 'loading' };
   private provider: ProviderId | undefined;
   private inFlight: Promise<void> | undefined;
+  readonly activity: ActivityTracker;
+  readonly billing: BillingService;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -50,6 +63,11 @@ class Controller implements vscode.Disposable {
     log: vscode.LogOutputChannel,
   ) {
     this.service = new QuotaService(log);
+    this.activity = new ActivityTracker(context.globalState, this.cfg.activityTracking);
+    this.billing = new BillingService(context.secrets, log);
+    // Re-render the dashboard when background data changes.
+    this.activity.onDidChange(() => this.dashboard?.visible && this.dashboard.update(this.model()));
+    this.billing.onDidChange(() => this.dashboard?.update(this.model()));
     this.bar = new StatusBar(this.cfg);
     this.dashboard = new DashboardViewProvider(context.extensionUri, {
       getModel: () => this.model(),
@@ -97,6 +115,7 @@ class Controller implements vscode.Disposable {
 
   onConfigChanged(): void {
     this.cfg = readConfig();
+    this.activity.setEnabled(this.cfg.activityTracking);
     this.schedule();
     if (this.view.kind === 'ok') {
       this.view = { ...this.view, forecast: this.forecast(this.view.snap) };
@@ -122,7 +141,12 @@ class Controller implements vscode.Disposable {
     this.provider = res.target.provider;
     switch (res.kind) {
       case 'ok': {
+        const prev = this.state.last;
         await this.state.record(res.snapshot);
+        if (prev && prev.resetDate === res.snapshot.resetDate && res.snapshot.used > prev.used) {
+          await this.activity.recordUsage(res.snapshot.used - prev.used);
+        }
+        void this.billing.refresh();
         const forecast = this.forecast(res.snapshot);
         this.view = { kind: 'ok', snap: res.snapshot, forecast };
         this.render();
@@ -159,6 +183,10 @@ class Controller implements vscode.Disposable {
       provider: this.provider,
       locale: vscode.env.language,
       strings: dashboardStrings(),
+      appearance: { accentColor: resolveColor(this.cfg.accent) },
+      models: this.modelsSection(),
+      review: this.reviewSection(data?.snap),
+      activity: this.activitySection(),
       tips: TIPS.map((t) => ({ id: t.id, text: vscode.l10n.t(t.text), relevant: !!status && t.when.includes(status) })).sort(
         (a, b) => Number(b.relevant) - Number(a.relevant),
       ),
@@ -174,6 +202,12 @@ class Controller implements vscode.Disposable {
         snoozedUntil: this.state.snoozedUntil,
         copilotCompletions: installed ? copilot.get<Record<string, boolean>>('enable')?.['*'] !== false : undefined,
         copilotNextEdit: installed ? copilot.get<boolean>('nextEditSuggestions.enabled', false) : undefined,
+        accent: this.cfg.accent,
+        statusBarIcon: this.cfg.statusBarIcon,
+        statusBarColor: this.cfg.statusBarColor,
+        surplusHint: this.cfg.surplusHint,
+        activityTracking: this.cfg.activityTracking,
+        billingTokenSet: this.billing.tokenSet,
       },
     };
 
@@ -205,8 +239,65 @@ class Controller implements vscode.Disposable {
         exhaustionDate: f.exhaustionDate?.toISOString(),
       };
       model.metrics = m;
+      const unused = this.cfg.surplusHint ? expectedSurplus(snap, f) : undefined;
+      if (unused !== undefined) {
+        model.surplus = { expectedUnused: unused, message: surplusMessage(snap, unused) };
+      }
     }
     return model;
+  }
+
+  private monthLabel(d: Date): string {
+    return d.toLocaleDateString(vscode.env.language, { month: 'long', year: 'numeric' });
+  }
+
+  private modelsSection(): DashboardModel['models'] {
+    const b = this.billing.state;
+    switch (b.state) {
+      case 'ok':
+        return { state: 'ok', items: b.items, periodLabel: this.monthLabel(b.period) };
+      case 'error':
+        return { state: 'error', errorMessage: b.message, items: [] };
+      default:
+        return { state: b.state, items: [] };
+    }
+  }
+
+  private reviewSection(current: QuotaSnapshot | undefined): DashboardModel['review'] {
+    // A cycle is labelled by the month it covered (the month before its reset).
+    const label = (resetDate: string) => {
+      const r = new Date(resetDate);
+      return this.monthLabel(new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() - 1, Math.max(1, r.getUTCDate()))));
+    };
+    const cycles: DashboardModel['review']['cycles'] = [];
+    if (current) {
+      const s = summarizeCycle(current, this.state.history, this.forecastOpts, Date.now());
+      cycles.push({ ...s, label: label(s.resetDate), current: true });
+    }
+    for (const c of this.state.cycles) {
+      if (!current || c.resetDate.slice(0, 10) !== current.resetDate.slice(0, 10)) {
+        cycles.push({ ...c, label: label(c.resetDate), current: false });
+      }
+    }
+    return { cycles: cycles.slice(0, 6) };
+  }
+
+  private activitySection(): DashboardModel['activity'] {
+    const { items, isActive } = this.activity.snapshot();
+    return {
+      enabled: this.cfg.activityTracking,
+      items: items.slice(0, 50).map((i) => ({
+        id: i.id,
+        title: i.day ? `${i.branch ?? i.repo} · ${fmtDate(new Date(i.start))}` : (i.branch ?? i.repo),
+        detail: i.detail,
+        repo: i.repo,
+        start: i.start,
+        end: i.end,
+        activeMinutes: Math.round(i.activeMs / 60_000),
+        used: Math.round(i.used * 10) / 10,
+        active: isActive(i),
+      })),
+    };
   }
 
   private githubUrl(url: string): string {
@@ -240,6 +331,17 @@ class Controller implements vscode.Disposable {
       case 'unsnooze':
         await this.state.unsnooze();
         return this.render();
+      case 'configureBillingToken':
+        return this.billing.configure();
+      case 'clearBillingToken':
+        return this.billing.clear();
+      case 'askSparsam':
+        return vscode.commands.executeCommand('workbench.action.chat.open', { query: '@sparsam ', isPartialQuery: true });
+      case 'clearActivity': {
+        const yes = vscode.l10n.t('Clear');
+        const ok = await vscode.window.showWarningMessage(vscode.l10n.t('Clear the recorded activity history?'), { modal: true }, yes);
+        return ok === yes ? this.activity.clear() : undefined;
+      }
       case 'openWalkthrough':
         return vscode.commands.executeCommand('workbench.action.openWalkthrough', `${this.context.extension.id}#${WALKTHROUGH}`, false);
     }
@@ -278,6 +380,8 @@ class Controller implements vscode.Disposable {
       clearInterval(this.timer);
     }
     this.bar.dispose();
+    this.activity.dispose();
+    this.billing.dispose();
   }
 }
 
@@ -291,6 +395,9 @@ export function activate(context: vscode.ExtensionContext): void {
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
+    registerSparsam(context),
+    vscode.commands.registerCommand('contingentWatcher.askSparsam', () => ctl.onDashboardCommand('askSparsam')),
+    vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
     vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.refresh()),
     vscode.commands.registerCommand('contingentWatcher.signIn', () => ctl.refresh(true)),

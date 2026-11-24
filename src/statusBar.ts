@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ProviderId } from './auth';
 import { Config } from './config';
+import { fillLevel, iconFor, resolveColor } from './core/appearance';
 import { pickTip } from './core/tips';
 import { Forecast, QuotaSnapshot } from './core/types';
 import { bar, fmt, fmtDate, statusLabel, unitLabel } from './format';
@@ -11,17 +12,6 @@ export type ViewState =
   | { kind: 'noCopilot'; provider: ProviderId; status?: number }
   | { kind: 'error'; message: string; stale?: { snap: QuotaSnapshot; forecast: Forecast } }
   | { kind: 'ok'; snap: QuotaSnapshot; forecast: Forecast };
-
-const ICON = '$(contingent-level-4)';
-
-/** Picks the gauge glyph (4 = full … 0 = empty) matching the remaining share. */
-export function levelIcon(snap: QuotaSnapshot): string {
-  if (snap.unlimited || snap.entitlement <= 0) {
-    return ICON;
-  }
-  const level = Math.max(0, Math.min(4, Math.ceil((snap.remaining / snap.entitlement) * 4)));
-  return `$(contingent-level-${level})`;
-}
 
 export class StatusBar implements vscode.Disposable {
   private item: vscode.StatusBarItem;
@@ -50,15 +40,17 @@ export class StatusBar implements vscode.Disposable {
     }
     const item = this.item;
     item.backgroundColor = undefined;
+    item.color = resolveColor(cfg.statusBarColor);
     item.command = 'contingentWatcher.showDetails';
+    const ICON = iconFor(cfg.statusBarIcon, 4);
 
     switch (state.kind) {
       case 'loading':
-        item.text = `${ICON} $(sync~spin)`;
+        item.text = `${ICON ? ICON + ' ' : ''}$(sync~spin)`;
         item.tooltip = vscode.l10n.t('Loading Copilot quota…');
         return;
       case 'signedOut':
-        item.text = `${ICON} $(account)`;
+        item.text = `${ICON ? ICON + ' ' : ''}$(account)`;
         item.tooltip = this.hint(
           state.provider === 'github-enterprise'
             ? vscode.l10n.t('Sign in with GitHub Enterprise to see your Copilot quota')
@@ -68,7 +60,7 @@ export class StatusBar implements vscode.Disposable {
         item.command = 'contingentWatcher.signIn';
         return;
       case 'noCopilot':
-        item.text = `${ICON} —`;
+        item.text = `${ICON ? ICON + ' ' : ''}—`;
         item.tooltip = this.hint(
           vscode.l10n.t('No metered Copilot quota found for this account'),
           state.status === 403
@@ -80,7 +72,7 @@ export class StatusBar implements vscode.Disposable {
         if (state.stale) {
           this.renderOk(state.stale.snap, state.stale.forecast, cfg, true);
         } else {
-          item.text = `${ICON} $(warning)`;
+          item.text = `${ICON ? ICON + ' ' : ''}$(warning)`;
           item.tooltip = vscode.l10n.t('Could not load Copilot quota: {0}', state.message);
         }
         return;
@@ -91,8 +83,9 @@ export class StatusBar implements vscode.Disposable {
 
   private renderOk(snap: QuotaSnapshot, f: Forecast, cfg: Config, stale: boolean): void {
     const item = this.item;
+    const ICON = iconFor(cfg.statusBarIcon, 4);
     if (snap.unlimited) {
-      item.text = `${ICON} ∞`;
+      item.text = `${ICON ? ICON + ' ' : ''}∞`;
       item.tooltip = vscode.l10n.t('Unlimited Copilot quota');
       return;
     }
@@ -110,12 +103,14 @@ export class StatusBar implements vscode.Disposable {
       default:
         value = fmt(snap.remaining);
     }
-    item.text = `${levelIcon(snap)} ${value}${stale ? ' $(history)' : ''}`;
+    item.text = `${[iconFor(cfg.statusBarIcon, fillLevel(snap.remaining, snap.entitlement)), value].filter(Boolean).join(' ')}${stale ? ' $(history)' : ''}`;
 
     if (f.status === 'critical' || f.status === 'exhausted') {
       item.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+      item.color = undefined; // keep the theme's readable warning foreground
     } else if (f.status === 'ahead') {
       item.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+      item.color = undefined;
     }
     item.tooltip = this.tooltip(snap, f, cfg, stale);
   }

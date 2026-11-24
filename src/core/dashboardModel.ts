@@ -64,6 +64,64 @@ export interface DashboardModel {
     planPerDay: number;
   };
   tips: { id: string; text: string; relevant: boolean }[];
+  /** Visual customisation. */
+  appearance: {
+    /** CSS colour for the gauge/accent; undefined = theme default (charts colours). */
+    accentColor?: string;
+  };
+  /**
+   * Set near the end of a cycle when a noticeable part of the allowance will
+   * likely expire unused ("use it or lose it").
+   */
+  surplus?: {
+    /** Requests/credits expected to remain unused at reset. */
+    expectedUnused: number;
+    /** Translated one-line message ready to display. */
+    message: string;
+  };
+  /** Usage per model from the official billing API (opt-in, needs a token). */
+  models: {
+    state: 'notConfigured' | 'loading' | 'ok' | 'error';
+    errorMessage?: string;
+    /** Sorted by quantity, descending. share is 0..1 of the total. */
+    items: { model: string; quantity: number; share: number }[];
+    /** e.g. "November 2026". */
+    periodLabel?: string;
+  };
+  /** Month-over-month review from archived cycles (newest first, max 6). */
+  review: {
+    cycles: {
+      /** Cycle label, e.g. "Oktober 2026". */
+      label: string;
+      used: number;
+      entitlement: number;
+      /** Average per active day. */
+      avgPerActiveDay: number;
+      activeDays: number;
+      peakDay?: { date: string; used: number };
+      /** True for the running cycle (partial data). */
+      current: boolean;
+    }[];
+  };
+  /** What was worked on and how long it took (per git branch, active time only). */
+  activity: {
+    enabled: boolean;
+    items: {
+      id: string;
+      /** Human-readable title (branch name, or "main · 24 Nov"). */
+      title: string;
+      /** Last commit message on that branch, if known. */
+      detail?: string;
+      repo: string;
+      /** Epoch ms of first and last activity. */
+      start: number;
+      end: number;
+      activeMinutes: number;
+      /** Quota used while this item was active. */
+      used: number;
+      active: boolean;
+    }[];
+  };
   settings: {
     display: 'remaining' | 'used' | 'percent' | 'dailyBudget';
     countWeekends: boolean;
@@ -78,6 +136,15 @@ export interface DashboardModel {
     /** Copilot's own toggles (undefined if Copilot is not installed). */
     copilotCompletions?: boolean;
     copilotNextEdit?: boolean;
+    /** Accent preset id or a #hex colour. */
+    accent: string;
+    /** Status bar icon style. */
+    statusBarIcon: 'gauge' | 'battery' | 'ring' | 'bars' | 'none';
+    /** Status bar text/icon colour: 'auto' or a #hex colour. */
+    statusBarColor: string;
+    surplusHint: boolean;
+    activityTracking: boolean;
+    billingTokenSet: boolean;
   };
 }
 
@@ -92,7 +159,11 @@ export type DashboardCommand =
   | 'openChat'
   | 'snooze'
   | 'unsnooze'
-  | 'openWalkthrough';
+  | 'openWalkthrough'
+  | 'configureBillingToken'
+  | 'clearBillingToken'
+  | 'askSparsam'
+  | 'clearActivity';
 
 /** Settings the webview may change directly. */
 export type DashboardSettingKey =
@@ -105,7 +176,12 @@ export type DashboardSettingKey =
   | 'tipsEnabled'
   | 'authProvider'
   | 'copilotCompletions'
-  | 'copilotNextEdit';
+  | 'copilotNextEdit'
+  | 'accent'
+  | 'statusBarIcon'
+  | 'statusBarColor'
+  | 'surplusHint'
+  | 'activityTracking';
 
 export type WebviewMessage =
   | { type: 'ready' }

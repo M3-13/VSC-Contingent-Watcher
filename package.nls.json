@@ -37,5 +37,20 @@
   "cfg.authProvider.enterprise": "GitHub Enterprise (GHE.com or GitHub Enterprise Server, uses `github-enterprise.uri`)",
   "cfg.apiUrl": "Optional API base URL override, e.g. `https://api.acme.ghe.com`. Leave empty to derive it automatically.",
   "view.container": "Copilot Contingent",
-  "view.dashboard": "Dashboard"
+  "view.dashboard": "Dashboard",
+  "cmd.askSparsam": "Ask @sparsam (included model)",
+  "cmd.configureBillingToken": "Set Up Per-Model Usage (GitHub Token)",
+  "cfg.accentColor": "Accent colour of the dashboard gauge: `auto` (theme), a preset (`teal`, `violet`, `blue`, `green`, `orange`, `pink`) or a hex colour like `#ff8800`.",
+  "cfg.statusBarIcon": "Icon style in the status bar. The icon fills down as your allowance is used.",
+  "cfg.icon.gauge": "Gauge (default)",
+  "cfg.icon.battery": "Battery",
+  "cfg.icon.ring": "Ring",
+  "cfg.icon.bars": "Bars",
+  "cfg.icon.none": "No icon, text only",
+  "cfg.statusBarColor": "Text/icon colour of the status bar item: `auto` (theme), a preset or a hex colour. Warning colours still take precedence.",
+  "cfg.surplusHint": "In the last week of the month, tell me if part of my allowance will likely expire unused (\"use it or lose it\").",
+  "cfg.activity": "Record active editor time and usage per git branch for the history view. Stays on this computer.",
+  "cfg.preferredModels": "Model families `@sparsam` may use, in order of preference (prefix match). Pick models that are included in your plan (0x multiplier). If none is available, `@sparsam` does not answer rather than falling back to a premium model.",
+  "chat.description": "Answers with an included model, no premium requests",
+  "chat.btw": "Quick side question with a free model; your main chat stays untouched"
 }

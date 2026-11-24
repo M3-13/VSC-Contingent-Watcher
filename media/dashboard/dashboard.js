@@ -17,15 +17,34 @@
   let chartObserver;
   let chartWidth = 0;
 
+  const TABS = ['overview', 'history', 'tips', 'settings'];
   const saved = safe(() => vscode.getState()) || {};
   const ui = {
-    open: Object.assign({ allTips: false, settings: false }, saved.open || {}),
+    tab: TABS.includes(saved.tab) ? saved.tab : 'overview',
     tipId: /** @type {string | undefined} */ (saved.tipId),
     tipAt: Number(saved.tipAt) || 0,
   };
 
   function persist() {
-    safe(() => vscode.setState({ open: ui.open, tipId: ui.tipId, tipAt: ui.tipAt }));
+    safe(() => vscode.setState({ tab: ui.tab, tipId: ui.tipId, tipAt: ui.tipAt }));
+  }
+
+  /** Mirrors ACCENT_PRESETS in src/core/appearance.ts. */
+  const PRESETS = { teal: '#14b8a6', violet: '#8b5cf6', blue: '#3b82f6', green: '#22c55e', orange: '#f97316', pink: '#ec4899' };
+  const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+  /** Codepoint of the level-4 (full) glyph per status bar icon style; level n is base + (4 - n). */
+  const GLYPH_BASE = { gauge: 0xe001, battery: 0xe006, ring: 0xe00b, bars: 0xe010 };
+
+  // Icon font for the status bar style previews (URI handed over by the extension).
+  const fontUri = document.body.getAttribute('data-icon-font');
+  if (fontUri && typeof FontFace !== 'undefined') {
+    safe(() =>
+      new FontFace('contingent-icons', `url("${fontUri}")`)
+        .load()
+        .then((f) => document.fonts.add(f))
+        .catch(() => undefined),
+    );
   }
 
   /** @template T @param {() => T} fn @returns {T | undefined} */
@@ -177,6 +196,14 @@
     flame: S('<path d="M8 14.5c2.8 0 4.5-1.9 4.5-4.4 0-2.6-2-4.1-2.8-6.6-.5 1.6-1.4 2.5-2.2 2.9C7.5 4.6 7 2.9 5.9 1.5 5.6 4.6 3.5 6.4 3.5 10.1c0 2.5 1.7 4.4 4.5 4.4z"/>'),
     bars: S('<path d="M3 13.5v-4M6.33 13.5v-7M9.67 13.5v-5M13 13.5v-10"/>'),
     trend: S('<path d="M2 12 6 8l3 2.5 5-6"/><path d="M10.5 4.5H14V8"/>'),
+    gift: S('<rect x="2.25" y="6" width="11.5" height="3" rx=".75"/><path d="M3.25 9v4.25h9.5V9M8 6v7.25M8 6C6.5 6 4.75 5.6 4.75 4.1c0-1.9 2.5-1.6 3.25 1.9.75-3.5 3.25-3.8 3.25-1.9C11.25 5.6 9.5 6 8 6z"/>'),
+    branch: S('<circle cx="4.5" cy="3.5" r="1.5"/><circle cx="4.5" cy="12.5" r="1.5"/><circle cx="11.5" cy="5.5" r="1.5"/><path d="M4.5 5v6M11.5 7c0 2.5-2 3-7 4"/>'),
+    cpu: S('<rect x="4" y="4" width="8" height="8" rx="1.5"/><path d="M6.5 1.75V4M9.5 1.75V4M6.5 12v2.25M9.5 12v2.25M1.75 6.5H4M1.75 9.5H4M12 6.5h2.25M12 9.5h2.25"/>'),
+    key: S('<circle cx="5.25" cy="10.75" r="2.75"/><path d="M7.25 8.75 13.5 2.5M11 5l1.75 1.75M9.5 6.5l1.25 1.25"/>'),
+    palette: S('<path d="M8 1.75a6.25 6.25 0 1 0 0 12.5c1 0 1.4-.6 1.4-1.25 0-.9-.75-1.15-.75-2 0-.7.55-1.25 1.25-1.25h1.6a2.75 2.75 0 0 0 2.75-2.75C14.25 4.2 11.45 1.75 8 1.75z"/><circle cx="4.75" cy="8" r=".8" fill="currentColor"/><circle cx="6.25" cy="4.9" r=".8" fill="currentColor"/><circle cx="9.75" cy="4.9" r=".8" fill="currentColor"/>'),
+    monitor: S('<rect x="1.75" y="2.75" width="12.5" height="8.5" rx="1.5"/><path d="M5.5 14h5M8 11.25V14"/>'),
+    trash: S('<path d="M2.75 4.25h10.5M6.25 4.25V2.75h3.5v1.5M4 4.25l.6 9h6.8l.6-9"/>'),
+    check: S('<path d="M3.25 8.5 6.5 11.5l6.25-7"/>'),
   };
 
   // ---------------------------------------------------------------- gauge
@@ -327,16 +354,6 @@
       list.push(tile({ icon: icon.target, label: t('dailyBudget'), value: fmt(budget), unit: perDayUnit, sub: t('budgetDaysLeft', fmt(f.daysLeft)) }));
       const paceTone = f.burnRate > Math.max(budget, m.planPerDay) * 1.05 ? 'bad' : f.burnRate > m.planPerDay * 1.05 ? 'warn' : 'good';
       list.push(tile({ icon: icon.speed, label: t('pace'), value: fmt(f.burnRate), unit: perDayUnit, sub: t('planPerDay', fmt(m.planPerDay)), tone: paceTone }));
-      const ahead = m.buffer >= 0;
-      list.push(
-        tile({
-          icon: icon.shield,
-          label: t('buffer'),
-          value: fmt(Math.round(m.buffer), true),
-          sub: ahead ? t('aheadOfPlan', fmt(Math.abs(m.bufferDays))) : t('overPlan', fmt(Math.abs(m.bufferDays))),
-          tone: ahead ? 'good' : 'bad',
-        }),
-      );
       const over = f.projectedUsed > q.entitlement;
       list.push(
         tile({
@@ -348,18 +365,11 @@
           tone: over ? 'bad' : 'good',
         }),
       );
-      list.push(
-        tile({
-          icon: icon.flame,
-          label: t('streak'),
-          value: m.streakDays === 1 ? t('streakOne') : t('streakMany', fmt(m.streakDays)),
-          sub: t('withinBudget'),
-          tone: m.streakDays > 0 ? 'good' : '',
-        }),
-      );
+    } else {
+      // Unlimited / no forecast: nothing to budget, show recent volume instead.
+      list.push(tile({ icon: icon.bars, label: t('last7'), value: fmt(m.last7Days), sub: t('avgPerDay', fmt(m.last7Days / 7)) }));
+      list.push(tile({ icon: icon.trend, label: t('cycleAverage'), value: fmt(m.cycleAverage), unit: perDayUnit, sub: t('perBudgetDay') }));
     }
-    list.push(tile({ icon: icon.bars, label: t('last7'), value: fmt(m.last7Days), sub: t('avgPerDay', fmt(m.last7Days / 7)) }));
-    list.push(tile({ icon: icon.trend, label: t('cycleAverage'), value: fmt(m.cycleAverage), unit: perDayUnit, sub: t('perBudgetDay') }));
     return `<section class="tiles-wrap" aria-label="${t('pace')}"><div class="tiles">${list.join('')}</div></section>`;
   }
 

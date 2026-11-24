@@ -5,11 +5,13 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 ## Was es macht
 
 - Zeigt verbleibendes Kontingent, Verbrauch, Prozent oder Tagesbudget in der Statusleiste. Das Icon zeigt den Füllstand.
-- **Dashboard** (Klick auf die Statusleiste oder das Icon in der Activity Bar) mit diesen Kennzahlen:
-  - Heute, Tagesbudget, Tempo und Puffer gegenüber dem Plan
-  - Prognose zum Reset, Serie der Tage im Budget, letzte 7 Tage
-  - Tagesverlauf als Diagramm
-  - Spartipps, Schnell-Einstellungen und die Copilot-Schalter für Inline-Vorschläge und NES
+- **Dashboard** (Klick auf die Statusleiste oder das Icon in der Activity Bar) mit 4 Tabs:
+  - **Übersicht:** Tachometer, Heute, Tagesbudget, Tempo, Puffer, Prognose, Tagesdiagramm und ein Hinweis gegen Verfall
+  - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit pro Git-Branch, mit Verbrauch), Monatsrückblick, Verbrauch pro Modell
+  - **Tipps:** Spartipps passend zur aktuellen Lage
+  - **Einstellungen:** Anzeige, Warnungen, Budget, Akzentfarbe, Statusleisten-Icon und -Farbe, Copilot-Schalter
+- **`@sparsam` im Copilot-Chat:** beantwortet einfache Fragen mit einem inklusiven Modell (0x), ohne Premium-Requests. `@sparsam /btw …` ist für schnelle Zwischenfragen, ohne den Haupt-Chat zu belasten.
+- **Hinweis gegen Verfall:** In der letzten Monatswoche meldet die Extension, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.
 - Berechnet ein **Tagesbudget** bis zum Reset (optional ohne Wochenenden, mit Reserve).
 - Prognostiziert dein Tempo und zeigt, an welchem Tag das Kontingent bei gleichem Verbrauch leer wäre.
 - Warnt bei Schwellenwerten (z. B. 50/75/90/100 %) und bei zu hohem Tempo.
@@ -37,6 +39,12 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `contingentWatcher.budget.countWeekends` | `false` | Wochenenden als Budgettage zählen. |
 | `contingentWatcher.budget.reserve` | `0` | Reserve, die nicht ins Tagesbudget eingeht. |
 | `contingentWatcher.tips.enabled` | `true` | Spartipp im Tooltip anzeigen. |
+| `contingentWatcher.appearance.accentColor` | `auto` | Akzentfarbe des Tachometers (`teal`, `violet`, `blue`, `green`, `orange`, `pink` oder `#hex`). |
+| `contingentWatcher.statusBar.icon` | `gauge` | Icon-Stil: `gauge`, `battery`, `ring`, `bars`, `none`. |
+| `contingentWatcher.statusBar.color` | `auto` | Farbe des Statusleisten-Eintrags (Vorlage oder `#hex`). |
+| `contingentWatcher.warnings.surplusHint` | `true` | Hinweis, wenn Kontingent ungenutzt verfallen würde. |
+| `contingentWatcher.activity.enabled` | `true` | Aktive Zeit und Verbrauch pro Git-Branch aufzeichnen (nur lokal). |
+| `contingentWatcher.chat.preferredModels` | `gpt-5-mini, gpt-4.1, gpt-4o` | Modelle, die `@sparsam` nutzen darf (nur inklusive Modelle eintragen). |
 
 ## Befehle
 
@@ -48,6 +56,10 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `Copilot Contingent: Einstellungen öffnen` | Öffnet die Einstellungen der Erweiterung. |
 | `Copilot Contingent: Mit GitHub anmelden` | Anmeldung anstoßen. |
 | `Copilot Contingent: Warnungen für 24 Stunden stummschalten` | Snooze. |
+
+## Verbrauch pro Modell (optional)
+
+Das zeigt, welches Modell wie viel deines Kontingents verbraucht. Dafür braucht es einen *fine-grained* GitHub-Token mit der Account-Berechtigung **Plan (read)**. Du richtest ihn im Dashboard unter *Verlauf* oder über den Befehl *Verbrauch pro Modell einrichten* ein. Der Token liegt sicher im SecretStorage von VS Code.
 
 ## Enterprise-Accounts & Fehlersuche
 

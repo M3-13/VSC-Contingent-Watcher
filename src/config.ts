@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { IconStyle } from './core/appearance';
 
 export type DisplayMode = 'remaining' | 'used' | 'percent' | 'dailyBudget';
 
@@ -12,6 +13,11 @@ export interface Config {
   countWeekends: boolean;
   reserve: number;
   tipsEnabled: boolean;
+  accent: string;
+  statusBarIcon: IconStyle;
+  statusBarColor: string;
+  surplusHint: boolean;
+  activityTracking: boolean;
 }
 
 export const SECTION = 'contingentWatcher';
@@ -31,5 +37,10 @@ export function readConfig(): Config {
     countWeekends: c.get<boolean>('budget.countWeekends', false),
     reserve: Math.max(0, c.get<number>('budget.reserve', 0)),
     tipsEnabled: c.get<boolean>('tips.enabled', true),
+    accent: c.get<string>('appearance.accentColor', 'auto'),
+    statusBarIcon: c.get<IconStyle>('statusBar.icon', 'gauge'),
+    statusBarColor: c.get<string>('statusBar.color', 'auto'),
+    surplusHint: c.get<boolean>('warnings.surplusHint', true),
+    activityTracking: c.get<boolean>('activity.enabled', true),
   };
 }

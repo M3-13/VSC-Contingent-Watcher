@@ -37,3 +37,13 @@ export function statusLabel(f: Forecast): string {
       return vscode.l10n.t('Unlimited');
   }
 }
+
+/** "Use it or lose it" message shown in the dashboard and as notification. */
+export function surplusMessage(snap: QuotaSnapshot, unused: number): string {
+  return vscode.l10n.t(
+    'About {0} {1} will expire unused on {2}. A good time for demanding tasks with a premium model: refactoring, reviews, tests.',
+    fmt(unused),
+    unitLabel(snap),
+    fmtDate(snap.resetDate),
+  );
+}
