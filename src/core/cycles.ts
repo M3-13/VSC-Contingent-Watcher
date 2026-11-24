@@ -11,6 +11,8 @@ export interface CycleSummary {
   activeDays: number;
   avgPerActiveDay: number;
   peakDay?: { date: string; used: number };
+  /** Estimated need for the whole cycle at the observed pace. */
+  demand?: number;
 }
 
 export const MAX_CYCLES = 12;
@@ -32,6 +34,7 @@ export function summarizeCycle(snap: QuotaSnapshot, history: HistoryPoint[], opt
     activeDays: active.length,
     avgPerActiveDay: active.length > 0 ? active.reduce((s, d) => s + d.used, 0) / active.length : 0,
     peakDay: peak ? { date: peak.date, used: Math.round(peak.used) } : undefined,
+    demand: m.demand ? Math.round(m.demand.estimate) : undefined,
   };
 }
 

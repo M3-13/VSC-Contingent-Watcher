@@ -59,9 +59,16 @@ export interface DashboardModel {
     streakDays: number;
     /** Usage per calendar day of the current cycle, oldest first, incl. today. */
     /** estimated = before the first recorded data point (spread linearly). */
-    daily: { date: string; used: number; weekend: boolean; estimated: boolean }[];
+    /** exhausted = allowance was already empty at the start of that day. */
+    daily: { date: string; used: number; weekend: boolean; estimated: boolean; exhausted: boolean }[];
     /** Budget per day for the chart reference line (entitlement / budget days of cycle). */
     planPerDay: number;
+    /**
+     * Estimated need for the whole cycle at the observed pace, also when the
+     * allowance already ran out ("how much would I have needed to get by?").
+     * Undefined with too little data. planPerDay is the max/day to get by.
+     */
+    demand?: { estimate: number; overBy: number; exhaustedOn?: string };
   };
   tips: { id: string; text: string; relevant: boolean }[];
   /** Visual customisation. */
@@ -99,6 +106,8 @@ export interface DashboardModel {
       avgPerActiveDay: number;
       activeDays: number;
       peakDay?: { date: string; used: number };
+      /** Estimated need for that cycle at its pace (may exceed entitlement). */
+      demand?: number;
       /** True for the running cycle (partial data). */
       current: boolean;
     }[];
