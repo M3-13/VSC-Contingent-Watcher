@@ -4,6 +4,7 @@
  */
 import * as vscode from 'vscode';
 import { pickNewChatEditorCommand } from './chatCommands';
+import { pinOriginSession } from '../btw/context';
 
 const PREFILL = '@btw ';
 const TYPE_DELAY_MS = 150;
@@ -38,7 +39,9 @@ function errText(err: unknown): string {
  * 'newTab': a new chat editor was opened and `@btw ` typed into it.
  * 'fallback': no such command; `@btw ` was put into the main chat instead.
  */
-export async function openBtwChat(log?: vscode.LogOutputChannel): Promise<'newTab' | 'fallback'> {
+export async function openBtwChat(ext: vscode.ExtensionContext, log?: vscode.LogOutputChannel): Promise<'newTab' | 'fallback'> {
+  // Remember the chat this btw was started from, before a new chat exists.
+  await pinOriginSession(ext, (m) => log?.info(m));
   let commands: string[] = [];
   try {
     commands = await vscode.commands.getCommands(true);
@@ -72,7 +75,7 @@ export async function openBtwChat(log?: vscode.LogOutputChannel): Promise<'newTa
 
 /** Command handler: {@link openBtwChat}, with a one-time hint when only the main chat could be used. */
 export async function openBtwChatCommand(context: vscode.ExtensionContext, log?: vscode.LogOutputChannel): Promise<void> {
-  const result = await openBtwChat(log);
+  const result = await openBtwChat(context, log);
   if (result === 'fallback' && !context.globalState.get<boolean>(FALLBACK_INFO_KEY)) {
     await context.globalState.update(FALLBACK_INFO_KEY, true);
     void vscode.window.showInformationMessage(

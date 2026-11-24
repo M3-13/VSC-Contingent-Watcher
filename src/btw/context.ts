@@ -25,6 +25,36 @@ const SESSION_CANDIDATES = 8;
 export const BTW_PARTICIPANT_ID = 'contingentWatcher.btw';
 const SKIP = { skipAgentIds: [BTW_PARTICIPANT_ID], skipPrefixes: ['@btw'] };
 
+const ORIGIN_KEY = 'contingentWatcher.btw.originSession';
+/** How long a btw chat keeps the context of the chat it was started from. */
+const ORIGIN_TTL_MS = 2 * 60 * 60 * 1000;
+
+interface OriginPin {
+  name: string;
+  at: number;
+}
+
+/**
+ * Remembers the chat you are working in when the btw shortcut is pressed, so
+ * the new btw chat uses exactly that chat as context (even with several chats).
+ */
+export async function pinOriginSession(ext: vscode.ExtensionContext, log: (m: string) => void = () => undefined): Promise<void> {
+  try {
+    const found = await findWorkingSession(ext, log, undefined);
+    if (found) {
+      await ext.workspaceState.update(ORIGIN_KEY, { name: found.name, at: Date.now() } satisfies OriginPin);
+      log(`btw: started from chat session ${found.name}`);
+    }
+  } catch {
+    // best effort
+  }
+}
+
+function currentPin(ext: vscode.ExtensionContext): string | undefined {
+  const pin = ext.workspaceState.get<OriginPin>(ORIGIN_KEY);
+  return pin && Date.now() - pin.at < ORIGIN_TTL_MS ? pin.name : undefined;
+}
+
 export interface GatherOptions {
   /** Defaults to the `contingentWatcher.btw.includeChat` setting. */
   includeChat?: boolean;
@@ -133,17 +163,49 @@ async function readLatestChat(
   log: (m: string) => void,
   wantTurns: boolean,
 ): Promise<{ chat?: BtwChatContext; modelId?: string }> {
-  const files = (await Promise.all(sessionDirs(ext).map(listSessionFiles))).flat().sort((a, b) => b.mtime - a.mtime);
+  const found = await findWorkingSession(ext, log, currentPin(ext));
+  if (!found) {
+    return {};
+  }
+  const { info, file, fallbackModel } = found;
+  if (!info) {
+    return { modelId: fallbackModel };
+  }
+  const snap = info.snapshot!;
+  log(
+    `btw: working chat session ${file.name}: ${snap.turns.length} of ${snap.totalTurns} turns` +
+      (snap.truncated ? ' (shortened)' : '') +
+      (info.modelId ? `, model ${info.modelId}` : '') +
+      (wantTurns ? '' : ' (content not used)'),
+  );
+  return {
+    chat: wantTurns ? { ...snap, ageMinutes: Math.max(0, (Date.now() - file.mtime) / 60000) } : undefined,
+    modelId: info.modelId ?? fallbackModel,
+  };
+}
+
+/**
+ * The working session: the pinned origin chat if it is still a working session,
+ * otherwise the most recently modified session with turns besides @btw.
+ */
+async function findWorkingSession(
+  ext: vscode.ExtensionContext,
+  log: (m: string) => void,
+  pinned: string | undefined,
+): Promise<{ name: string; file: SessionFile; info?: ReturnType<typeof parseChatSessionInfo>; fallbackModel?: string } | undefined> {
+  const all = (await Promise.all(sessionDirs(ext).map(listSessionFiles))).flat().sort((a, b) => b.mtime - a.mtime);
+  // The pinned origin chat goes first; the rest by recency.
+  const files = pinned ? [...all.filter((f) => f.name === pinned), ...all.filter((f) => f.name !== pinned)] : all;
   if (files.length === 0) {
     log('btw: no local chat sessions found');
-    return {};
+    return undefined;
   }
   const now = Date.now();
   let fallbackModel: string | undefined;
-  for (const f of files.slice(0, SESSION_CANDIDATES)) {
-    if (now - f.mtime > MAX_SESSION_AGE_MS) {
+  for (const f of files.slice(0, SESSION_CANDIDATES + (pinned ? 1 : 0))) {
+    if (now - f.mtime > MAX_SESSION_AGE_MS && f.name !== pinned) {
       log(`btw: chat session ${f.name} is older than 24 h, not used`);
-      break;
+      continue;
     }
     if (f.size > MAX_SESSION_BYTES) {
       log(`btw: chat session ${f.name} is too large (${Math.round(f.size / 1048576)} MB), skipped`);
@@ -161,20 +223,10 @@ async function readLatestChat(
       log(`btw: chat session ${f.name} has no turns besides side questions, skipped`);
       continue;
     }
-    const snap = info.snapshot;
-    log(
-      `btw: working chat session ${f.name}: ${snap.turns.length} of ${snap.totalTurns} turns` +
-        (snap.truncated ? ' (shortened)' : '') +
-        (info.modelId ? `, model ${info.modelId}` : '') +
-        (wantTurns ? '' : ' (content not used)'),
-    );
-    return {
-      chat: wantTurns ? { ...snap, ageMinutes: Math.max(0, (now - f.mtime) / 60000) } : undefined,
-      modelId: info.modelId ?? fallbackModel,
-    };
+    return { name: f.name, file: f, info, fallbackModel };
   }
   log('btw: no working chat session found');
-  return { modelId: fallbackModel };
+  return fallbackModel !== undefined && files[0] ? { name: files[0].name, file: files[0], fallbackModel } : undefined;
 }
 
 // ------------------------------------------------------------------ editor
