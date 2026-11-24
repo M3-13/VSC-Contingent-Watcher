@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { ProviderId } from './auth';
 import { Config } from './config';
 import { fillLevel, iconFor, resolveColor } from './core/appearance';
-import { pickTip } from './core/tips';
+import { pickTip, situationsFor } from './core/tips';
+import { expectedSurplus } from './core/surplus';
 import { Forecast, QuotaSnapshot } from './core/types';
 import { bar, fmt, fmtDate, statusLabel, unitLabel } from './format';
 
@@ -162,7 +163,10 @@ export class StatusBar implements vscode.Disposable {
       md.appendMarkdown(`$(history) ${vscode.l10n.t('Offline — showing data from {0}', new Date(snap.fetchedAt).toLocaleTimeString())}\n\n`);
     }
     if (cfg.tipsEnabled) {
-      const tip = pickTip(f.status, new Date().getDate());
+      const tip = pickTip(
+        situationsFor({ status: f.status, cycleElapsed: f.cycleElapsed, surplus: expectedSurplus(snap, f) !== undefined }),
+        new Date().getDate(),
+      );
       md.appendMarkdown(`---\n\n$(lightbulb) ${vscode.l10n.t(tip.text)}\n\n`);
     }
     md.appendMarkdown(

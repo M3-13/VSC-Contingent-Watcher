@@ -4,7 +4,7 @@ import { DashboardCommand, DashboardModel, DashboardSettingKey } from './core/da
 import { computeForecast } from './core/forecast';
 import { computeMetrics } from './core/metrics';
 import { summarizeCycle } from './core/cycles';
-import { TIPS } from './core/tips';
+import { relevantTips, situationsFor } from './core/tips';
 import { Forecast, QuotaSnapshot } from './core/types';
 import { dashboardStrings } from './dashboardStrings';
 import { DashboardViewProvider } from './dashboardView';
@@ -206,7 +206,6 @@ class Controller implements vscode.Disposable {
     const copilot = this.copilot;
     const installed = copilot.installed;
     const own = vscode.workspace.getConfiguration(SECTION);
-    const status = data?.forecast.status;
 
     const model: DashboardModel = {
       state: data ? 'ok' : v.kind,
@@ -219,9 +218,16 @@ class Controller implements vscode.Disposable {
       models: this.modelsSection(data?.snap),
       review: this.reviewSection(data?.snap),
       activity: this.activitySection(),
-      tips: TIPS.map((t) => ({ id: t.id, text: vscode.l10n.t(t.text), relevant: !!status && t.when.includes(status) })).sort(
-        (a, b) => Number(b.relevant) - Number(a.relevant),
-      ),
+      tips: data
+        ? relevantTips(
+            situationsFor({
+              status: data.forecast.status,
+              cycleElapsed: data.forecast.cycleElapsed,
+              surplus: expectedSurplus(data.snap, data.forecast) !== undefined,
+            }),
+            new Date().getDate(),
+          ).map((t) => ({ id: t.id, text: vscode.l10n.t(t.text), relevant: true }))
+        : [],
       settings: {
         display: this.cfg.display,
         countWeekends: this.cfg.countWeekends,
