@@ -36,9 +36,9 @@ export function dashboardStrings(): Record<string, string> {
 
     // btw
     askBtw: vscode.l10n.t('Ask btw'),
-    btwStrip: vscode.l10n.t('Quick side question, chat stays as is'),
+    btwStrip: vscode.l10n.t('Type @btw in Copilot Chat for a quick side question'),
     btwTitle: vscode.l10n.t('Side questions with btw'),
-    btwText: vscode.l10n.t("Ask a quick side question while Copilot keeps working. It sees your current chat and editor, and the answer isn't added to your chat."),
+    btwText: vscode.l10n.t("Type @btw in Copilot Chat for a quick side question. It knows your chat and editor, and isn't mixed into your main task."),
     btwModelInfoChat: vscode.l10n.t('Answered by the same model as your chat, so it costs what that model costs.'),
     btwModelInfoFree: vscode.l10n.t('Answered by a free included model, so it uses no premium requests.'),
 
@@ -61,6 +61,8 @@ export function dashboardStrings(): Record<string, string> {
     running: vscode.l10n.t('running'),
     peakDay: vscode.l10n.t('Peak {0} on {1}'),
     avgActiveDay: vscode.l10n.t('Ø {0} per active day'),
+    reviewNeed: vscode.l10n.t('Need ~{0}'),
+    reviewNeedTitle: vscode.l10n.t('Estimated need for this month at its pace'),
     reviewEmpty: vscode.l10n.t('Your monthly review fills up as cycles go by.'),
 
     // History: per model
@@ -81,9 +83,14 @@ export function dashboardStrings(): Record<string, string> {
     pace: vscode.l10n.t('Pace'),
     perDay: vscode.l10n.t('{0}/day'),
     planPerDay: vscode.l10n.t('plan {0}/day'),
-    atReset: vscode.l10n.t('At reset'),
-    projectedOf: vscode.l10n.t('projected of {0}'),
-    emptyOn: vscode.l10n.t('empty on {0}'),
+    need: vscode.l10n.t('Need (est.)'),
+    needTitle: vscode.l10n.t('What this month would need at your pace so far, also after the allowance ran out.'),
+    needOver: vscode.l10n.t('+{0} over allowance'),
+    needGetBy: vscode.l10n.t('to get by: max {0}/day'),
+    needFits: vscode.l10n.t('fits your allowance'),
+    needSpare: vscode.l10n.t('{0} to spare'),
+    needNoData: vscode.l10n.t('not enough data yet'),
+    emptySince: vscode.l10n.t('empty since {0}'),
     buffer: vscode.l10n.t('Buffer'),
     bufferAhead: vscode.l10n.t('{0} days ahead'),
     bufferBehind: vscode.l10n.t('{0} days behind'),
@@ -91,6 +98,7 @@ export function dashboardStrings(): Record<string, string> {
     streakOne: vscode.l10n.t('1 day'),
     streakMany: vscode.l10n.t('{0} days'),
     withinBudget: vscode.l10n.t('within budget'),
+    streakEnded: vscode.l10n.t('ended · allowance empty'),
     last7: vscode.l10n.t('Last 7 days'),
     avgPerDay: vscode.l10n.t('Ø {0}/day'),
     cycleAverage: vscode.l10n.t('Cycle average'),
@@ -103,6 +111,8 @@ export function dashboardStrings(): Record<string, string> {
     legendToday: vscode.l10n.t('Today'),
     legendWeekend: vscode.l10n.t('Weekend'),
     legendEstimated: vscode.l10n.t('Estimated'),
+    legendEmpty: vscode.l10n.t('Allowance empty'),
+    emptyNote: vscode.l10n.t('allowance empty'),
     estimatedNote: vscode.l10n.t('estimated (before tracking started)'),
     weekendNote: vscode.l10n.t('weekend'),
 

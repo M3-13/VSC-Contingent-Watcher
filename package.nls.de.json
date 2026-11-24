@@ -57,5 +57,9 @@
   "cfg.btwIncludeChat": "Nutze einen Schnappschuss deines letzten Copilot-Chats (aus dem lokalen Chat-Speicher von VS Code) als Kontext für btw-Nebenfragen. Wenn aus, wird nur der Editor verwendet.",
   "cfg.btwModel": "Welches Modell btw-Nebenfragen beantwortet.",
   "cfg.btwModel.chat": "Dasselbe Modell wie dein aktueller Copilot-Chat (Premium-Modelle verbrauchen Premium-Requests). Wird es nicht erkannt, fragt btw einmal und merkt sich deine Wahl.",
-  "cfg.btwModel.included": "Ein kostenloses inklusives Modell: das erste verfügbare aus `#contingentWatcher.chat.preferredModels#`. Keine Premium-Requests."
+  "cfg.btwModel.included": "Ein kostenloses inklusives Modell: das erste verfügbare aus `#contingentWatcher.chat.preferredModels#`. Keine Premium-Requests.",
+  "cfg.unit": "Welches Kontingent angezeigt wird, wenn GitHub mehrere meldet.",
+  "cfg.unit.auto": "Credits, wenn vorhanden (nutzungsbasierte Abrechnung), sonst Premium-Requests",
+  "cfg.unit.credits": "Immer AI-Credits bevorzugen",
+  "cfg.unit.requests": "Immer Premium-Requests bevorzugen"
 }

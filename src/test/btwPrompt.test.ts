@@ -82,3 +82,13 @@ test('normalizePreferred', () => {
   assert.deepEqual(normalizePreferred([]), [...DEFAULT_PREFERRED_MODELS]);
   assert.deepEqual(normalizePreferred(['gpt-4o', 3, '']), ['gpt-4o']);
 });
+
+test('chatFooter: italic, escaped, skips empty parts', async () => {
+  const { chatFooter, escapeMarkdown } = await import('../btw/prompt');
+  assert.equal(chatFooter(['btw', 'GPT-5', 'same model as your chat', 'side question']), '_btw · GPT\\-5 · same model as your chat · side question_');
+  assert.equal(chatFooter(['btw', undefined, '  ', 'x']), '_btw · x_');
+  assert.equal(chatFooter([]), '');
+  assert.equal(escapeMarkdown('my_file*.ts [x](y)'), 'my\\_file\\*\\.ts \\[x\\]\\(y\\)');
+  // No raw underscore can end the italics early.
+  assert.doesNotMatch(chatFooter(['Context: editor selection in src/my_mod.ts']).slice(1, -1), /(^|[^\\])_/);
+});

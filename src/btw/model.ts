@@ -101,6 +101,18 @@ export async function resolveBtwModel(
   return picked ? { kind: 'ok', model: picked, source: 'chosen' } : { kind: 'notChosen' };
 }
 
+/** Footer wording for why this model answered. */
+export function modelSourceLabel(source: BtwModelSource): string {
+  switch (source) {
+    case 'chat':
+      return vscode.l10n.t('same model as your chat');
+    case 'included':
+      return vscode.l10n.t('included model · no premium requests');
+    default:
+      return vscode.l10n.t('chosen by you');
+  }
+}
+
 function noModelsMessage(): string {
   return vscode.l10n.t('No Copilot chat models are available. Check that GitHub Copilot Chat is installed and you are signed in.');
 }

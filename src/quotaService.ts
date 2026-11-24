@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { parseCopilotUser } from './core/parse';
+import { parseCopilotUser, UnitPreference } from './core/parse';
 import { QuotaSnapshot } from './core/types';
 import { apiBaseFor, AuthTarget, resolveTargets } from './auth';
 
@@ -96,8 +96,12 @@ export class QuotaService {
         return { kind: 'error', target, message: `HTTP ${res.status}` };
       }
       const json = await res.json();
-      this.log.debug(`[${target.provider}] quota keys: ${Object.keys((json as any)?.quota_snapshots ?? {}).join(', ') || '(none)'}`);
-      const snapshot = parseCopilotUser(json);
+      const snaps = (json as any)?.quota_snapshots ?? {};
+      // Shapes only (no personal data): helps to see whether credits or requests are reported.
+      this.log.info(
+        `[${target.provider}] quotas: ${Object.entries<any>(snaps).map(([k, v]) => `${k}(entitlement=${v?.entitlement ?? '?'}, unlimited=${v?.unlimited ?? '?'})`).join(', ') || '(none)'}`,
+      );
+      const snapshot = parseCopilotUser(json, Date.now(), vscode.workspace.getConfiguration('contingentWatcher').get<UnitPreference>('unit', 'auto'));
       return snapshot ? { kind: 'ok', snapshot, target } : { kind: 'noCopilot', target };
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);

@@ -448,6 +448,21 @@
           ],
           "default": "chat",
           "markdownDescription": "%cfg.btwModel%"
+        },
+        "contingentWatcher.unit": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "credits",
+            "requests"
+          ],
+          "enumDescriptions": [
+            "%cfg.unit.auto%",
+            "%cfg.unit.credits%",
+            "%cfg.unit.requests%"
+          ],
+          "default": "auto",
+          "markdownDescription": "%cfg.unit%"
         }
       }
     },

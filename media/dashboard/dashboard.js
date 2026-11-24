@@ -329,7 +329,7 @@
       <div class="tile-label">${o.icon || ''}<span>${o.label}</span></div>
       <div class="tile-value">${o.value}${o.unit ? `<span class="tile-unit">${o.unit}</span>` : ''}</div>
       ${o.bar !== undefined ? `<div class="meter meter-mini"><span class="meter-fill" data-w="${clamp(o.bar * 100, 0, 100)}"></span></div>` : ''}
-      <div class="tile-sub">${o.sub || ''}</div></div>`;
+      ${(Array.isArray(o.sub) ? o.sub : [o.sub || '']).map((x) => `<div class="tile-sub">${x}</div>`).join('')}</div>`;
   }
 
   function tiles() {
@@ -366,23 +366,16 @@
           tone: ahead ? 'good' : 'bad',
         }),
       );
-      const over = f.projectedUsed > q.entitlement;
-      list.push(
-        tile({
-          icon: icon.flag,
-          label: t('atReset'),
-          value: fmt(f.projectedUsed),
-          unit: `/${fmt(q.entitlement)}`,
-          sub: f.exhaustionDate ? `${icon.warning}${t('emptyOn', fmtDate(f.exhaustionDate))}` : t('projectedOf', fmt(q.entitlement)),
-          tone: over ? 'bad' : 'good',
-        }),
-      );
+      list.push(needTile());
+      // The streak ends when the allowance runs out; say why instead of "within budget".
+      const d = m.daily || [];
+      const ended = d.length > 0 && (d[d.length - 1].exhausted || (d.length > 1 && d[d.length - 2].exhausted));
       list.push(
         tile({
           icon: icon.flame,
           label: t('streak'),
           value: m.streakDays === 1 ? t('streakOne') : t('streakMany', fmt(m.streakDays)),
-          sub: t('withinBudget'),
+          sub: ended && m.streakDays === 0 ? t('streakEnded') : t('withinBudget'),
           tone: m.streakDays > 0 ? 'good' : '',
         }),
       );
@@ -394,12 +387,39 @@
     return `<section class="tiles-wrap" aria-label="${t('pace')}"><div class="tiles">${list.join('')}</div></section>`;
   }
 
+  /** "How much would this month need?" — estimated demand vs. the allowance. */
+  function needTile() {
+    const q = model.quota;
+    const m = model.metrics;
+    const dm = m.demand;
+    const base = { icon: icon.flag, label: t('need'), title: raw('needTitle') };
+    if (!dm) {
+      return tile({ ...base, value: '–', sub: t('needNoData') });
+    }
+    const subs = [];
+    let tone;
+    if (dm.overBy > 0) {
+      tone = dm.exhaustedOn ? 'bad' : 'warn';
+      subs.push(t('needOver', fmt(Math.round(dm.overBy))));
+      if (dm.exhaustedOn) {
+        subs.push(`${icon.warning}${t('emptySince', fmtDate(parseDay(dm.exhaustedOn)))}`);
+      }
+      subs.push(t('needGetBy', fmt(m.planPerDay)));
+    } else {
+      tone = 'good';
+      subs.push(t('needFits'));
+      subs.push(t('needSpare', fmt(Math.round(-dm.overBy))));
+    }
+    return tile({ ...base, value: `~${fmt(Math.round(dm.estimate))}`, unit: `/${fmt(q.entitlement)}`, sub: subs, tone });
+  }
+
   function chartCard() {
     const m = model.metrics;
     if (!m || !m.daily || m.daily.length === 0) {
       return '';
     }
     const anyEst = m.daily.some((d) => d.estimated);
+    const anyEmpty = m.daily.some((d) => d.exhausted);
     const showPlan = !model.quota.unlimited && m.planPerDay > 0;
     const showBudget = !model.quota.unlimited && model.forecast && model.forecast.dailyBudget > 0;
     const legend = [
@@ -407,6 +427,7 @@
       `<span class="lg"><span class="sw sw-today"></span>${t('legendToday')}</span>`,
       showBudget ? `<span class="lg"><span class="sw sw-ghost"></span>${t('dailyBudget')}</span>` : '',
       anyEst ? `<span class="lg"><span class="sw sw-est"></span>${t('legendEstimated')}</span>` : '',
+      anyEmpty ? `<span class="lg"><span class="sw sw-empty"></span>${t('legendEmpty')}</span>` : '',
       `<span class="lg"><span class="sw sw-weekend"></span>${t('legendWeekend')}</span>`,
     ].join('');
     return `<section class="card chart-card st-${esc((model.forecast && model.forecast.status) || 'onTrack')}" aria-labelledby="chart-title">
@@ -430,9 +451,11 @@
     // Future calendar days until the reset, shown as ghosts at today's daily budget.
     const last = days[days.length - 1].day;
     const resetDay = startOfDay(new Date(q.resetDate));
+    // Once the allowance is empty, the rest of the cycle stays empty too.
+    const emptyNow = !q.unlimited && q.remaining <= 0 && m.daily.some((d) => d.exhausted);
     for (let d = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1); d < resetDay && days.length < 42; d.setDate(d.getDate() + 1)) {
       const wk = d.getDay() === 0 || d.getDay() === 6;
-      days.push({ date: '', used: 0, weekend: wk, estimated: false, day: new Date(d), future: true });
+      days.push({ date: '', used: 0, weekend: wk, estimated: false, exhausted: emptyNow, day: new Date(d), future: true });
     }
     const budget = !q.unlimited && f ? f.dailyBudget : 0;
     const todayIdx = m.daily.length - 1;
@@ -459,6 +482,9 @@
       if (d.weekend) {
         shade += `<rect class="c-weekend" x="${x0.toFixed(2)}" y="${top}" width="${col.toFixed(2)}" height="${plotH}"/>`;
       }
+      if (d.exhausted) {
+        shade += `<rect class="c-empty" x="${x0.toFixed(2)}" y="${top}" width="${col.toFixed(2)}" height="${plotH}"/>`;
+      }
       let tip;
       if (d.future) {
         const b = d.weekend && !settings.countWeekends ? 0 : budget;
@@ -466,7 +492,7 @@
           const h = Math.max(2, base - y(b));
           bars += `<rect class="c-ghost" x="${(cx - bw / 2).toFixed(2)}" y="${(base - h).toFixed(2)}" width="${bw.toFixed(2)}" height="${h.toFixed(2)}" rx="2"/>`;
         }
-        tip = `${fmtDate(d.day, fullFmt)} · ${raw('dailyBudget')}: ${fmt(b)}`;
+        tip = d.exhausted ? `${fmtDate(d.day, fullFmt)} · ${raw('emptyNote')}` : `${fmtDate(d.day, fullFmt)} · ${raw('dailyBudget')}: ${fmt(b)}`;
       } else {
         const h = d.used > 0 ? Math.max(2, base - y(d.used)) : 0;
         const cls = ['c-bar', i === todayIdx ? 'today' : '', d.weekend ? 'weekend' : '', d.estimated ? 'est' : '']
@@ -477,7 +503,12 @@
         } else {
           bars += `<rect class="c-zero" x="${(cx - bw / 2).toFixed(2)}" y="${base - 1.5}" width="${bw.toFixed(2)}" height="1.5" rx=".75"/>`;
         }
-        const notes = [i === todayIdx ? raw('legendToday') : '', d.weekend ? raw('weekendNote') : '', d.estimated ? raw('estimatedNote') : '']
+        const notes = [
+          i === todayIdx ? raw('legendToday') : '',
+          d.weekend ? raw('weekendNote') : '',
+          d.estimated ? raw('estimatedNote') : '',
+          d.exhausted ? raw('emptyNote') : '',
+        ]
           .filter(Boolean)
           .join(', ');
         tip = `${fmtDate(d.day, fullFmt)}: ${fmt(d.used)} ${q.unitLabel}${notes ? ` (${notes})` : ''}`;
@@ -504,7 +535,9 @@
 
     host.innerHTML = `<svg class="c-svg" width="${w}" height="${H}" viewBox="0 0 ${w} ${H}" focusable="false">
       <defs><pattern id="c-hatch" patternUnits="userSpaceOnUse" width="4" height="4" patternTransform="rotate(45)">
-        <rect class="c-hatch-bg" width="4" height="4"/><line class="c-hatch-line" x1="0" y1="0" x2="0" y2="4"/></pattern></defs>
+        <rect class="c-hatch-bg" width="4" height="4"/><line class="c-hatch-line" x1="0" y1="0" x2="0" y2="4"/></pattern>
+        <pattern id="c-empty-hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(-45)">
+        <line class="c-empty-line" x1="0" y1="0" x2="0" y2="6"/></pattern></defs>
       ${shade}<line class="c-base" x1="0" x2="${w}" y1="${base + 0.5}" y2="${base + 0.5}"/>${now}${bars}${plan}${labels}${hits}</svg>`;
   }
 
@@ -682,7 +715,11 @@
           return `<li class="rev ${c.current ? 'current' : ''} ${over ? 'over' : ''}">
             <div class="rev-head"><span class="rev-label">${esc(c.label)}${
               c.current ? ` <span class="badge badge-live">${t('running')}</span>` : ''
-            }</span><span class="rev-val"><b>${fmt(c.used)}</b><span class="muted"> / ${fmt(c.entitlement)}</span></span></div>
+            }</span><span class="rev-val"><b>${fmt(c.used)}</b><span class="muted"> / ${fmt(c.entitlement)}</span>${
+              c.demand !== undefined && c.demand > c.entitlement
+                ? `<span class="rev-need" title="${t('reviewNeedTitle')}"> · ${t('reviewNeed', fmt(Math.round(c.demand)))}</span>`
+                : ''
+            }</span></div>
             <div class="meter rev-meter"><span class="meter-fill" data-w="${clamp(share * 100, 0, 100)}"></span></div>
             ${facts ? `<div class="rev-facts">${facts}</div>` : ''}</li>`;
         })

@@ -3,7 +3,14 @@ import { QuotaSnapshot, QuotaUnit } from './types';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 const IGNORED = new Set(['chat', 'completions']);
-const PREFERRED = ['premium_interactions', 'ai_credits', 'credits', 'premium_requests'];
+const REQUEST_KEYS = ['premium_interactions', 'premium_requests'];
+
+/** Which quota to show when the API reports several. */
+export type UnitPreference = 'auto' | 'credits' | 'requests';
+
+function isCreditKey(k: string): boolean {
+  return /credit/i.test(k);
+}
 
 function num(v: unknown): number | undefined {
   const n = typeof v === 'string' ? Number(v) : v;
@@ -32,16 +39,20 @@ function normaliseReset(raw: unknown, now: number): string {
  * Parses the (undocumented) `copilot_internal/user` response defensively.
  * Every field is optional; returns undefined if no metered quota is found.
  */
-export function parseCopilotUser(body: any, now: number = Date.now()): QuotaSnapshot | undefined {
+export function parseCopilotUser(body: any, now: number = Date.now(), prefer: UnitPreference = 'auto'): QuotaSnapshot | undefined {
   if (!body || typeof body !== 'object') {
     return undefined;
   }
   const snapshots: Record<string, any> = body.quota_snapshots ?? {};
   const keys = Object.keys(snapshots);
+  const metered = keys.filter((k) => !IGNORED.has(k) && snapshots[k] && typeof snapshots[k] === 'object');
+  const credit = metered.find((k) => isCreditKey(k) && !snapshots[k].unlimited) ?? metered.find(isCreditKey);
+  const request = REQUEST_KEYS.find((k) => snapshots[k]);
+  // Credits (usage-based billing) are what costs money, so they win in "auto".
   const key =
-    PREFERRED.find((k) => snapshots[k]) ??
-    keys.find((k) => !IGNORED.has(k) && snapshots[k] && !snapshots[k].unlimited) ??
-    keys.find((k) => !IGNORED.has(k));
+    (prefer === 'requests' ? (request ?? credit) : (credit ?? request)) ??
+    metered.find((k) => !snapshots[k].unlimited) ??
+    metered[0];
   if (!key) {
     return undefined;
   }

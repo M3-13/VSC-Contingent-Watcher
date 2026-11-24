@@ -18,6 +18,10 @@ const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000;
 /** Try this many of the newest session files (a brand-new chat may still be empty). */
 const SESSION_CANDIDATES = 3;
 
+/** The @btw chat participant; its own turns are side questions, not part of the main conversation. */
+export const BTW_PARTICIPANT_ID = 'contingentWatcher.btw';
+const SKIP = { skipAgentIds: [BTW_PARTICIPANT_ID], skipPrefixes: ['@btw'] };
+
 export interface GatherOptions {
   /** Defaults to the `contingentWatcher.btw.includeChat` setting. */
   includeChat?: boolean;
@@ -143,7 +147,7 @@ async function readLatestChat(
     } catch {
       continue;
     }
-    const info = parseChatSessionInfo(text);
+    const info = parseChatSessionInfo(text, SKIP);
     if (!info) {
       log(`btw: nothing usable in chat session ${f.name}`);
       continue;

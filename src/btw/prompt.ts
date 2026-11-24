@@ -179,6 +179,17 @@ export function buildContextBlock(ctx: BtwContext): string {
   return blocks.join('\n\n');
 }
 
+/** Escapes Markdown punctuation so names and paths render literally. */
+export function escapeMarkdown(text: string): string {
+  return text.replace(/[\\`*_{}[\]()#+\-.!|<>~]/g, (c) => '\\' + c);
+}
+
+/** Italic one-line footer for a chat answer, e.g. "_btw · GPT-5 · same model as your chat · side question_". */
+export function chatFooter(segments: readonly (string | undefined)[]): string {
+  const parts = segments.map((s) => (s ?? '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+  return parts.length ? `_${parts.map(escapeMarkdown).join(' · ')}_` : '';
+}
+
 /** First user message: instruction plus context. */
 export function buildInstructionMessage(ctx: BtwContext): string {
   const block = buildContextBlock(ctx);

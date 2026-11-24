@@ -91,9 +91,12 @@ export interface DashboardModel {
     state: 'notConfigured' | 'loading' | 'ok' | 'error';
     errorMessage?: string;
     /** Sorted by quantity, descending. share is 0..1 of the total. */
-    items: { model: string; quantity: number; share: number }[];
+    /** credits is set when the report has amounts (1 credit = $0.01); share is by credits then. */
+    items: { model: string; quantity: number; credits?: number; share: number }[];
     /** e.g. "November 2026". */
     periodLabel?: string;
+    /** True when items carry credits (show credits instead of request counts). */
+    showCredits?: boolean;
   };
   /** Month-over-month review from archived cycles (newest first, max 6). */
   review: {
@@ -160,6 +163,8 @@ export interface DashboardModel {
     apiUrl: string;
     /** Which model btw uses: the current chat model or a free (included) model. */
     btwModel: 'chat' | 'included';
+    /** Which quota to show if GitHub reports both: credits (usage-based) or requests. */
+    unit: 'auto' | 'credits' | 'requests';
     /** Included model families btw may use in 'included' mode, in order. */
     preferredModels: string[];
     /** Include the current Copilot chat conversation as btw context. */
@@ -216,6 +221,7 @@ export type DashboardSettingKey =
   | 'apiUrl'
   | 'preferredModels'
   | 'btwModel'
+  | 'unit'
   | 'btwIncludeChat'
   | 'copilotEagerness'
   | 'copilotLanguage';

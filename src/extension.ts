@@ -47,6 +47,7 @@ const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   preferredModels: 'chat.preferredModels',
   btwIncludeChat: 'btw.includeChat',
   btwModel: 'btw.model',
+  unit: 'unit',
 };
 
 
@@ -241,6 +242,7 @@ class Controller implements vscode.Disposable {
         preferredModels: own.get<string[]>('chat.preferredModels', ['gpt-5-mini', 'gpt-4.1', 'gpt-4o']),
         btwIncludeChat: own.get<boolean>('btw.includeChat', true),
         btwModel: own.get<string>('btw.model', 'chat') === 'included' ? 'included' : 'chat',
+        unit: (['credits', 'requests'] as const).find((u) => u === own.get<string>('unit')) ?? 'auto',
         accent: this.cfg.accent,
         statusBarIcon: this.cfg.statusBarIcon,
         statusBarColor: this.cfg.statusBarColor,
@@ -305,7 +307,12 @@ class Controller implements vscode.Disposable {
     }
     switch (b.state) {
       case 'ok':
-        return { state: 'ok', items: b.items, periodLabel: this.monthLabel(b.period) };
+        return {
+          state: 'ok',
+          items: b.items,
+          periodLabel: this.monthLabel(b.period),
+          showCredits: b.items.length > 0 && b.items.every((i) => i.credits !== undefined),
+        };
       case 'error':
         return { state: 'error', errorMessage: b.message, items: [] };
       default:
@@ -424,6 +431,8 @@ class Controller implements vscode.Disposable {
       v = value === 'left' ? 'left' : 'right';
     } else if (key === 'apiUrl') {
       v = typeof value === 'string' ? value.trim() : '';
+    } else if (key === 'unit') {
+      v = value === 'credits' || value === 'requests' ? value : 'auto';
     } else if (key === 'btwModel') {
       v = value === 'included' ? 'included' : 'chat';
     } else if (key === 'preferredModels') {

@@ -8,7 +8,7 @@ import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { streamBtwAnswer } from './answer';
 import { noModelMarkdown, PREFERRED_MODELS_SETTING } from '../chat/lm';
-import { BtwModelSource, btwMode, chooseBtwModel, resolveBtwModel, setBtwMode } from './model';
+import { btwMode, chooseBtwModel, modelSourceLabel, resolveBtwModel, setBtwMode } from './model';
 import { BtwMode, btwModeOf } from './modelMatch';
 import { describeBtwContext, gatherBtwContext, hasEditorSelection } from './context';
 
@@ -253,7 +253,7 @@ export class BtwViewProvider implements vscode.WebviewViewProvider, vscode.Dispo
         return;
       }
       card.model = pick.model.name;
-      card.modelNote = sourceLabel(pick.source);
+      card.modelNote = modelSourceLabel(pick.source);
       card.status = 'streaming';
       this.post({ type: 'card', card });
       this.log.info(`btw: asking ${pick.model.name} (${pick.model.family}, ${pick.source}) · context: ${card.context}`);
@@ -336,8 +336,21 @@ export class BtwViewProvider implements vscode.WebviewViewProvider, vscode.Dispo
   }
 }
 
-/** Command `contingentWatcher.btw`: open the view; with a selection, prefill "About the selection: ". */
-export async function btwCommand(provider: BtwViewProvider): Promise<void> {
+/** Opens Copilot Chat with `@btw ` prefilled (the main way to ask a side question). */
+export async function openBtwInChat(): Promise<void> {
+  await vscode.commands.executeCommand('workbench.action.chat.open', { query: '@btw ', isPartialQuery: true });
+}
+
+/** Command `contingentWatcher.btw`: ask a side question in Copilot Chat via @btw. */
+export async function btwCommand(_provider?: BtwViewProvider): Promise<void> {
+  await openBtwInChat();
+}
+
+/**
+ * Reveals the btw panel (works in parallel while a chat request is busy); with a
+ * selection, prefills "About the selection: ".
+ */
+export async function revealBtwPanel(provider: BtwViewProvider): Promise<void> {
   await provider.ask(hasEditorSelection() ? vscode.l10n.t('About the selection: ') : undefined);
 }
 
@@ -376,15 +389,4 @@ function webviewStrings(): Record<string, string> {
     ),
     emptyCost: vscode.l10n.t('Chat model: costs what your chat model costs. Free model: no premium requests.'),
   };
-}
-
-function sourceLabel(source: BtwModelSource): string {
-  switch (source) {
-    case 'chat':
-      return vscode.l10n.t('same model as your chat');
-    case 'included':
-      return vscode.l10n.t('included model · no premium requests');
-    default:
-      return vscode.l10n.t('chosen by you');
-  }
 }

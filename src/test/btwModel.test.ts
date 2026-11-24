@@ -97,3 +97,16 @@ test('btwModeOf', () => {
   assert.equal(btwModeOf(undefined), 'chat');
   assert.equal(btwModeOf('gpt-5'), 'chat');
 });
+
+test("@btw's own turns are skipped, but the chat's model is still read from them", () => {
+  const session = {
+    requests: [
+      req('main question', { modelId: 'copilot/gpt-4.1' }),
+      { ...req('side', { modelId: 'copilot/claude-sonnet-4.5' }), agent: { id: 'contingentWatcher.btw' } },
+      req('@btw another side'),
+    ],
+  };
+  const info = parseChatSessionInfo(JSON.stringify(session), { skipAgentIds: ['contingentWatcher.btw'], skipPrefixes: ['@btw'] });
+  assert.deepEqual(info?.snapshot?.turns.map((t) => t.user), ['main question']);
+  assert.equal(info?.modelId, 'copilot/claude-sonnet-4.5');
+});
