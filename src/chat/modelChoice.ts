@@ -40,3 +40,15 @@ export function availableFamilies(available: readonly ModelInfo[]): string[] {
 export function truncate(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max) + '\n… [truncated]';
 }
+
+/** Default for `contingentWatcher.chat.preferredModels` (included / 0x model families). */
+export const DEFAULT_PREFERRED_MODELS: readonly string[] = ['gpt-5-mini', 'gpt-4.1', 'gpt-4o'];
+
+/** Validates the raw setting value; falls back to the defaults when empty or invalid. */
+export function normalizePreferred(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [...DEFAULT_PREFERRED_MODELS];
+  }
+  const list = value.filter((s): s is string => typeof s === 'string' && s.trim() !== '');
+  return list.length > 0 ? list : [...DEFAULT_PREFERRED_MODELS];
+}
