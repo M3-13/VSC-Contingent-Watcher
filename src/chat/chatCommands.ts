@@ -1,38 +1,43 @@
 /**
- * Pure picking of the VS Code command that opens a *new* chat in an editor tab.
- * Command ids differ between VS Code versions, so known ids are tried first and
- * a pattern is used as a fallback. Commands that move or reopen the existing
- * session (open in editor / new window / sidebar …) are never chosen: the main
- * chat must stay untouched. No vscode import (unit-testable).
+ * Picks the VS Code command that opens a *new, separate* chat for btw.
+ * Only explicit, known command ids are used: commands that move or replace the
+ * current session must never run (the main chat has to stay untouched).
+ * No vscode import (unit-testable).
  */
 
-/** Tried in this order. */
-export const KNOWN_NEW_CHAT_EDITOR_COMMANDS: readonly string[] = [
-  'workbench.action.chat.newEditor',
-  'workbench.action.chat.openNewEditor',
+/** "Chat: New Chat Window": a new chat in its own window. */
+export const NEW_CHAT_WINDOW_COMMANDS: readonly string[] = ['workbench.action.newChatWindow', 'workbench.action.chat.newChatWindow'];
+
+/** "Chat: New Chat Editor": a new chat in an editor tab. */
+export const NEW_CHAT_EDITOR_COMMANDS: readonly string[] = [
+  'workbench.action.openChat',
   'workbench.action.chat.newChatEditor',
-  'workbench.action.chat.newEditorChat',
-  'workbench.action.openChatEditor',
+  'workbench.action.chat.newEditor',
 ];
 
-const PATTERN = /^workbench\.action\.(?:chat\.)?(?:new|open)[A-Za-z]*Editor$/;
-/** Commands that move/reopen the current session or are about something else. */
-const EXCLUDE = /In(?:Editor|NewWindow|Sidebar|Panel|Window)|Move|Export|Import|Edits?Session|History|Inline|Terminal|Notebook|Quick/i;
+export type OpenIn = 'window' | 'side' | 'tab';
 
-export function isNewChatEditorCommand(id: string): boolean {
-  const rest = id.replace(/^workbench\.action\.(?:chat\.)?/, '');
-  // Must say "new": a bare "open…Editor" may reopen or move the current session.
-  return PATTERN.test(id) && /new/i.test(rest) && !EXCLUDE.test(rest);
+export interface OpenPlan {
+  /** Command that creates the new chat. */
+  command: string;
+  /** Where it ends up; 'window' commands need no extra move. */
+  kind: 'window' | 'editor';
 }
 
-export function pickNewChatEditorCommand(available: Iterable<string>): string | undefined {
+/**
+ * The command to run for the wanted placement. A chat window is preferred for
+ * 'window'; if the VS Code version has none, a chat editor tab is used and the
+ * caller moves it into a new window.
+ */
+export function planOpen(available: Iterable<string>, openIn: OpenIn): OpenPlan | undefined {
   const set = new Set(available);
-  const known = KNOWN_NEW_CHAT_EDITOR_COMMANDS.find((id) => set.has(id));
-  if (known) {
-    return known;
+  const window = NEW_CHAT_WINDOW_COMMANDS.find((id) => set.has(id));
+  const editor = NEW_CHAT_EDITOR_COMMANDS.find((id) => set.has(id));
+  if (openIn === 'window' && window) {
+    return { command: window, kind: 'window' };
   }
-  // Prefer "new…" over "open…", then the shortest id; deterministic.
-  return [...set]
-    .filter(isNewChatEditorCommand)
-    .sort((a, b) => Number(/\.(?:chat\.)?open/.test(a)) - Number(/\.(?:chat\.)?open/.test(b)) || a.length - b.length || a.localeCompare(b))[0];
+  if (editor) {
+    return { command: editor, kind: 'editor' };
+  }
+  return window ? { command: window, kind: 'window' } : undefined;
 }

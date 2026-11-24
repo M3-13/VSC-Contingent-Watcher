@@ -345,9 +345,9 @@
   "Late in the month, batch small questions into one precise prompt and defer large explorations to after the reset.": "Bündele spät im Monat kleine Fragen in einem präzisen Prompt und verschiebe große Erkundungen auf die Zeit nach dem Reset.",
   "You are on track: keep fresh chats, scoped context and cheaper models for routine work, and check usage weekly.": "Du liegst im Plan: Bleib bei frischen Chats, begrenztem Kontext und günstigeren Modellen für Routine, und prüfe die Nutzung wöchentlich.",
   "Check the daily budget in the status bar: it tells you what you can spend today and still get through to the reset.": "Schau auf das Tagesbudget in der Statusleiste: Es sagt dir, wie viel du heute verbrauchen kannst und trotzdem bis zum Reset auskommst.",
-  "Your VS Code version can't open a separate chat tab; @btw was put into the main chat.": "Deine VS-Code-Version kann keinen separaten Chat-Tab öffnen; @btw wurde in den Haupt-Chat eingefügt.",
   "Open btw in": "btw öffnen in",
   "Own window": "Eigenem Fenster",
   "Beside editor": "Neben dem Editor",
-  "Tab": "Tab"
+  "Tab": "Tab",
+  "Couldn't open a separate chat for btw in this VS Code version. Open a new chat (Chat: New Chat Window) and type @btw there.": "Diese VS-Code-Version konnte keinen separaten Chat für btw öffnen. Öffne einen neuen Chat (Chat: Neues Chatfenster) und tippe dort @btw."
 }
