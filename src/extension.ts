@@ -18,7 +18,7 @@ import { ActivityTracker } from './activityTracker';
 import { guidedSignIn } from './signIn';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
-import { BtwViewProvider, btwCommand, revealBtwPanel } from './btw/btwView';
+import { openBtwChatCommand } from './chat/openBtwChat';
 import { registerBtwParticipant } from './chat/btwParticipant';
 import { resolveColor } from './core/appearance';
 import { expectedSurplus } from './core/surplus';
@@ -467,19 +467,14 @@ export function activate(context: vscode.ExtensionContext): void {
   const state = new State(context.globalState);
   const log = vscode.window.createOutputChannel('Copilot Contingent', { log: true });
   const ctl = new Controller(context, state, log);
-  const btw = new BtwViewProvider(context, log);
   const openDashboard = () => vscode.commands.executeCommand(`${DashboardViewProvider.viewId}.focus`);
 
   context.subscriptions.push(
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
-    btw,
-    vscode.window.registerWebviewViewProvider(BtwViewProvider.viewId, btw),
-    vscode.commands.registerCommand('contingentWatcher.btw', () => btwCommand(btw)),
-    vscode.commands.registerCommand('contingentWatcher.btw.panel', () => revealBtwPanel(btw)),
+    vscode.commands.registerCommand('contingentWatcher.btw', () => openBtwChatCommand(context, log)),
     registerBtwParticipant(context, log),
-    vscode.commands.registerCommand('contingentWatcher.btw.clear', () => btw.clear()),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
     vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.refresh()),

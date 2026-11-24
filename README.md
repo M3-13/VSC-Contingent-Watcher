@@ -10,7 +10,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
   - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit pro Git-Branch, mit Verbrauch), Monatsrückblick, Verbrauch pro Modell
   - **Tipps:** Spartipps passend zur aktuellen Lage
   - **Einstellungen:** Anzeige, Warnungen, Budget, Akzentfarbe, Statusleisten-Icon und -Farbe, Copilot-Schalter
-- **`@btw` im Copilot-Chat – Nebenfrage wie in Claude Code:** `@btw deine Frage` antwortet mit dem gerade im Chat gewählten Modell (oder optional einem Gratis-Modell). Es kennt den bisherigen Chat und deinen Editor. Mit `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` öffnest du den Chat mit `@btw` vorausgefüllt. Läuft gerade ein Agent, nutzt du das btw-Panel (Befehl *Nebenfrage im Panel stellen*).
+- **`@btw` im Copilot-Chat – Nebenfrage wie in Claude Code:** `@btw deine Frage` antwortet mit dem gerade im Chat gewählten Modell (oder optional einem Gratis-Modell). Es kennt den bisherigen Chat und deinen Editor. `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` öffnet einen **neuen Chat-Tab** mit `@btw` vorausgefüllt. So musst du nie warten, auch wenn im Haupt-Chat gerade ein Agent arbeitet, und dein Haupt-Chat bleibt unberührt.
 - **Credits statt Requests:** Meldet GitHub AI-Credits (nutzungsbasierte Abrechnung), zeigt die Extension Credits an. Das ist einstellbar über `contingentWatcher.unit`.
 - **Bedarf (geschätzt):** wie viel dein Monat bei deinem Tempo gebraucht hätte, auch wenn das Kontingent schon leer ist, und wie viel pro Tag gereicht hätte.
 - **Hinweis gegen Verfall:** In der letzten Monatswoche meldet die Extension, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.

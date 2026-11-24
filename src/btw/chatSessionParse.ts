@@ -511,3 +511,26 @@ export function selectRecentTurns(turns: readonly ChatTurn[], opts: ParseOptions
   }
   return { turns: kept, totalTurns: turns.length, truncated };
 }
+
+// ------------------------------------------------------------------ working session
+
+/**
+ * True if the session holds the user's actual work: at least one usable turn
+ * after skipping side-question (@btw) turns. An empty new chat tab or one with
+ * only @btw turns is not a working session.
+ */
+export function isWorkingSession(info: ChatSessionInfo | undefined): boolean {
+  return !!info?.snapshot && info.snapshot.turns.length > 0;
+}
+
+export interface SessionCandidate {
+  name: string;
+  /** Last modified, ms since epoch. */
+  mtime: number;
+  info?: ChatSessionInfo;
+}
+
+/** The most recently modified working session, or undefined. */
+export function pickWorkingSession<T extends SessionCandidate>(candidates: readonly T[]): T | undefined {
+  return [...candidates].sort((a, b) => b.mtime - a.mtime).find((c) => isWorkingSession(c.info));
+}

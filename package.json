@@ -218,17 +218,6 @@
         "command": "contingentWatcher.btw",
         "title": "%cmd.btw%",
         "category": "Copilot Contingent"
-      },
-      {
-        "command": "contingentWatcher.btw.clear",
-        "title": "%cmd.btwClear%",
-        "category": "Copilot Contingent",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "contingentWatcher.btw.panel",
-        "title": "%cmd.btwPanel%",
-        "category": "Copilot Contingent"
       }
     ],
     "chatParticipants": [
@@ -247,13 +236,6 @@
           "title": "%view.container%",
           "icon": "media/activitybar.svg"
         }
-      ],
-      "panel": [
-        {
-          "id": "contingentWatcherBtw",
-          "title": "%view.btwContainer%",
-          "icon": "media/activitybar.svg"
-        }
       ]
     },
     "views": {
@@ -264,14 +246,6 @@
           "name": "%view.dashboard%",
           "icon": "media/activitybar.svg",
           "contextualTitle": "%view.container%"
-        }
-      ],
-      "contingentWatcherBtw": [
-        {
-          "type": "webview",
-          "id": "contingentWatcher.btw",
-          "name": "%view.btw%",
-          "contextualTitle": "%view.btwContainer%"
         }
       ]
     },
@@ -533,21 +507,6 @@
         ]
       }
     ],
-    "menus": {
-      "view/title": [
-        {
-          "command": "contingentWatcher.btw.clear",
-          "when": "view == contingentWatcher.btw",
-          "group": "navigation"
-        }
-      ],
-      "commandPalette": [
-        {
-          "command": "contingentWatcher.btw.clear",
-          "when": "false"
-        }
-      ]
-    },
     "keybindings": [
       {
         "command": "contingentWatcher.btw",

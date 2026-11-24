@@ -40,19 +40,6 @@ export function btwMode(): BtwMode {
   return btwModeOf(vscode.workspace.getConfiguration('contingentWatcher').get<string>('btw.model'));
 }
 
-/** Writes the mode (user settings; also the workspace value if one overrides it). */
-export async function setBtwMode(mode: BtwMode): Promise<void> {
-  const cfg = vscode.workspace.getConfiguration('contingentWatcher');
-  await cfg.update('btw.model', mode, vscode.ConfigurationTarget.Global);
-  const info = cfg.inspect<string>('btw.model');
-  if (info?.workspaceValue !== undefined) {
-    await cfg.update('btw.model', mode, vscode.ConfigurationTarget.Workspace);
-  }
-  if (info?.workspaceFolderValue !== undefined) {
-    await cfg.update('btw.model', mode, vscode.ConfigurationTarget.WorkspaceFolder);
-  }
-}
-
 export async function resolveBtwModel(
   ext: vscode.ExtensionContext,
   chatModelId: string | undefined,

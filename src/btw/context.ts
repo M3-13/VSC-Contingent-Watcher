@@ -4,7 +4,7 @@
  * Never throws; missing parts are simply left out.
  */
 import * as vscode from 'vscode';
-import { parseChatSessionInfo } from './chatSessionParse';
+import { isWorkingSession, parseChatSessionInfo } from './chatSessionParse';
 import { BtwChatContext, BtwContext, ContextLabels, EditorDiagnostic, EditorSnapshot, describeContext } from './prompt';
 
 const CURSOR_RADIUS = 30;
@@ -15,8 +15,11 @@ const MAX_DIAGNOSTICS = 20;
 const MAX_SESSION_BYTES = 64 * 1024 * 1024;
 /** Sessions not written for longer than this are not "what you're doing now". */
 const MAX_SESSION_AGE_MS = 24 * 60 * 60 * 1000;
-/** Try this many of the newest session files (a brand-new chat may still be empty). */
-const SESSION_CANDIDATES = 3;
+/**
+ * Read at most this many of the newest session files when looking for the working
+ * session (newer @btw tabs or empty chats are skipped).
+ */
+const SESSION_CANDIDATES = 8;
 
 /** The @btw chat participant; its own turns are side questions, not part of the main conversation. */
 export const BTW_PARTICIPANT_ID = 'contingentWatcher.btw';
@@ -120,6 +123,11 @@ async function listSessionFiles(dir: vscode.Uri): Promise<SessionFile[]> {
   return files.filter((f): f is SessionFile => !!f).sort((a, b) => b.mtime - a.mtime);
 }
 
+/**
+ * Finds the working session: the most recently modified session file with turns
+ * other than @btw side questions (so a fresh btw chat tab is skipped), and returns
+ * its recent turns and model.
+ */
 async function readLatestChat(
   ext: vscode.ExtensionContext,
   log: (m: string) => void,
@@ -131,7 +139,7 @@ async function readLatestChat(
     return {};
   }
   const now = Date.now();
-  const out: { chat?: BtwChatContext; modelId?: string } = {};
+  let fallbackModel: string | undefined;
   for (const f of files.slice(0, SESSION_CANDIDATES)) {
     if (now - f.mtime > MAX_SESSION_AGE_MS) {
       log(`btw: chat session ${f.name} is older than 24 h, not used`);
@@ -148,24 +156,25 @@ async function readLatestChat(
       continue;
     }
     const info = parseChatSessionInfo(text, SKIP);
-    if (!info) {
-      log(`btw: nothing usable in chat session ${f.name}`);
+    fallbackModel ??= info?.modelId;
+    if (!isWorkingSession(info) || !info?.snapshot) {
+      log(`btw: chat session ${f.name} has no turns besides side questions, skipped`);
       continue;
     }
-    if (!out.modelId && info.modelId) {
-      out.modelId = info.modelId;
-      log(`btw: chat model from ${f.name}: ${info.modelId}`);
-    }
-    if (wantTurns && !out.chat && info.snapshot) {
-      const snap = info.snapshot;
-      log(`btw: chat context from ${f.name}: ${snap.turns.length} of ${snap.totalTurns} turns` + (snap.truncated ? ' (shortened)' : ''));
-      out.chat = { ...snap, ageMinutes: Math.max(0, (now - f.mtime) / 60000) };
-    }
-    if (out.modelId && (out.chat || !wantTurns)) {
-      break;
-    }
+    const snap = info.snapshot;
+    log(
+      `btw: working chat session ${f.name}: ${snap.turns.length} of ${snap.totalTurns} turns` +
+        (snap.truncated ? ' (shortened)' : '') +
+        (info.modelId ? `, model ${info.modelId}` : '') +
+        (wantTurns ? '' : ' (content not used)'),
+    );
+    return {
+      chat: wantTurns ? { ...snap, ageMinutes: Math.max(0, (now - f.mtime) / 60000) } : undefined,
+      modelId: info.modelId ?? fallbackModel,
+    };
   }
-  return out;
+  log('btw: no working chat session found');
+  return { modelId: fallbackModel };
 }
 
 // ------------------------------------------------------------------ editor
@@ -232,10 +241,4 @@ function editorSnapshot(): EditorSnapshot | undefined {
     text,
     diagnostics,
   };
-}
-
-/** True if the active editor has a non-empty selection. */
-export function hasEditorSelection(): boolean {
-  const ed = vscode.window.activeTextEditor;
-  return !!ed && !ed.selection.isEmpty;
 }

@@ -161,3 +161,23 @@ test('responseText tolerates odd shapes', () => {
   assert.equal(responseText([{ kind: 'markdownVuln', content: { value: 'vuln md' } }]), 'vuln md');
   assert.equal(responseText([{ kind: 'toolInvocation', invocationMessage: 'Searching' }]), '[tool] Searching\n');
 });
+
+test('working session: skips newer empty and @btw-only sessions', async () => {
+  const { parseChatSessionInfo, pickWorkingSession, isWorkingSession } = await import('../btw/chatSessionParse');
+  const opts = { skipAgentIds: ['contingentWatcher.btw'], skipPrefixes: ['@btw'] };
+  const parse = (o: unknown) => parseChatSessionInfo(JSON.stringify(o), opts);
+  const main = parse({ requests: [req('refactor the parser', { value: 'working on it' })] });
+  const btwTab = parse({ requests: [{ ...req('@btw what is X?', { value: 'X is…' }), agent: { id: 'contingentWatcher.btw' } }] });
+  const empty = parse({ requests: [] });
+  assert.equal(isWorkingSession(main), true);
+  assert.equal(isWorkingSession(btwTab), false);
+  assert.equal(isWorkingSession(empty), false);
+  const picked = pickWorkingSession([
+    { name: 'old-main', mtime: 1, info: parse({ requests: [req('older work', { value: 'ok' })] }) },
+    { name: 'main', mtime: 5, info: main },
+    { name: 'btw-tab', mtime: 9, info: btwTab },
+    { name: 'empty', mtime: 10, info: empty },
+  ]);
+  assert.equal(picked?.name, 'main');
+  assert.equal(pickWorkingSession([{ name: 'btw', mtime: 1, info: btwTab }]), undefined);
+});
