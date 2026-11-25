@@ -337,5 +337,6 @@
   "1 day/week": "1 Tag/Woche",
   "{0} days/week": "{0} Tage/Woche",
   "None of your preferred free models is available, so I did not answer, to avoid using your allowance by accident.": "Keines deiner bevorzugten kostenlosen Modelle ist verfügbar. Ich habe nicht geantwortet, damit nicht versehentlich dein Kontingent verbraucht wird.",
-  "Used when your chat's model can't be detected. Premium models use your allowance.": "Wird genutzt, wenn das Modell deines Chats nicht erkannt wird. Premium-Modelle verbrauchen dein Kontingent."
+  "Used when your chat's model can't be detected. Premium models use your allowance.": "Wird genutzt, wenn das Modell deines Chats nicht erkannt wird. Premium-Modelle verbrauchen dein Kontingent.",
+  "free model · doesn't use your allowance": "kostenloses Modell · verbraucht kein Kontingent"
 }
