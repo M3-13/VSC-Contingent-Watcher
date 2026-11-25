@@ -560,12 +560,13 @@
     ]
   },
   "scripts": {
-    "compile": "tsc -p ./",
+    "compile": "npm run clean && tsc -p ./",
     "watch": "tsc -watch -p ./",
     "lint": "tsc -p ./ --noEmit",
     "test": "npm run compile && node --test \"out/test/*.test.js\"",
     "package": "vsce package",
-    "vscode:prepublish": "npm run compile"
+    "vscode:prepublish": "npm run compile",
+    "clean": "node -e \"require('fs').rmSync('out',{recursive:true,force:true})\""
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
