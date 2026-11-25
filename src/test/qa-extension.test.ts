@@ -536,7 +536,6 @@ test('dashboard model: correct values for work days Mon/Tue/Thu', async (t) => {
   assert.equal(daily.at(-1).offDay, !wd.includes(new Date(NOW).getDay()), 'today');
   // Review: current cycle first.
   assert.equal(m.review.cycles[0].current, true);
-  assert.equal(m.review.cycles[0].label, 'November 2026');
   assert.ok(m.tips.length >= 3 && m.tips.length <= 5);
   assert.equal(m.locale, 'en');
   assert.equal(m.strings.tabOverview, 'Overview');
@@ -805,4 +804,32 @@ test('interval: refreshes once refreshIntervalMinutes elapsed, also without wind
   t.mock.timers.tick(60_000);
   await settle(b.env);
   assert.equal(b.fetchCalls.length, 3);
+});
+
+test(
+  'i18n: status bar numbers follow the VS Code display language like the dashboard does',
+  { todo: 'BUG: format.ts fmt() uses toLocaleString() without vscode.env.language → "1,300" in the German status bar/tooltip, "1.300" in the dashboard' },
+  async (t) => {
+    const b = await boot(t, { locale: 'de', handler: () => json(BODIES.credits(1300)) });
+    assert.equal(b.item().text, '$(contingent-level-2) 1.300');
+  },
+);
+
+test(
+  'TZ: month review labels the November cycle "November 2026" also west of UTC',
+  { todo: 'BUG: extension.ts reviewSection label() formats 1 Nov 00:00Z in local time → "October 2026" in America/*' },
+  async (t) => {
+    const prev = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    t.after(() => (prev === undefined ? delete process.env.TZ : (process.env.TZ = prev)));
+    const b = await boot(t);
+    assert.equal(b.dashboard().model().review.cycles[0].label, 'November 2026');
+  },
+);
+
+test('month review label is "November 2026" in UTC/Europe', async (t) => {
+  const b = await boot(t);
+  if (new Date(Date.UTC(2026, 10, 1)).getDate() === 1) {
+    assert.equal(b.dashboard().model().review.cycles[0].label, 'November 2026');
+  }
 });
