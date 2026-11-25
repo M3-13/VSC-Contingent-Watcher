@@ -10,7 +10,7 @@ export interface UsageMetrics {
   buffer: number;
   bufferDays: number;
   streakDays: number;
-  daily: { date: string; used: number; weekend: boolean; estimated: boolean; exhausted: boolean }[];
+  daily: { date: string; used: number; offDay: boolean; estimated: boolean; exhausted: boolean }[];
   planPerDay: number;
   demand?: Demand;
 }
@@ -102,8 +102,8 @@ export function computeMetrics(
   const { start, firstReal, at } = usageCurve(snap, history, now);
   const resetMs = new Date(snap.resetDate).getTime();
 
-  const totalDays = Math.max(budgetDays(start, resetMs, opts.countWeekends), 1e-6);
-  const elapsedDays = budgetDays(start, Math.min(now, resetMs), opts.countWeekends);
+  const totalDays = Math.max(budgetDays(start, resetMs, opts.workDays), 1e-6);
+  const elapsedDays = budgetDays(start, Math.min(now, resetMs), opts.workDays);
   const planPerDay = snap.entitlement / totalDays;
 
   const today = Math.max(0, snap.used - at(Math.max(start, localDayStart(now))));
@@ -122,7 +122,7 @@ export function computeMetrics(
     daily.push({
       date: localIsoDate(d),
       used: Math.max(0, at(to) - at(from)),
-      weekend: wd === 0 || wd === 6,
+      offDay: opts.workDays.length > 0 && !opts.workDays.includes(wd),
       estimated: to <= firstReal,
       // Nothing left to spend from the start of this day on.
       exhausted: snap.entitlement > 0 && at(from) >= snap.entitlement - 1e-6,
@@ -130,7 +130,7 @@ export function computeMetrics(
   }
 
   // Consecutive finished days (newest first) within the plan, skipping
-  // weekends when they don't count. Estimated days end the streak.
+  // days off without usage. Estimated days end the streak.
   let streakDays = 0;
   for (let i = daily.length - 2; i >= 0; i--) {
     const day = daily[i];
@@ -138,7 +138,7 @@ export function computeMetrics(
     if (day.estimated || day.exhausted) {
       break;
     }
-    if (!opts.countWeekends && day.weekend && day.used === 0) {
+    if (day.offDay && day.used === 0) {
       continue;
     }
     if (day.used > planPerDay + 1e-9) {
@@ -161,7 +161,7 @@ export function computeMetrics(
     } else if (snap.remaining <= 0) {
       // Capped at the allowance: use the pace until it ran out.
       exhaustedOn = timeReaching(at, start, now, snap.entitlement - 1e-6);
-      const days = exhaustedOn !== undefined ? budgetDays(start, exhaustedOn, opts.countWeekends) : 0;
+      const days = exhaustedOn !== undefined ? budgetDays(start, exhaustedOn, opts.workDays) : 0;
       rate = days >= 0.5 ? snap.entitlement / days : undefined;
     } else {
       rate = elapsedDays >= 1 ? snap.used / elapsedDays : undefined;

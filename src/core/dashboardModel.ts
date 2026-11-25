@@ -60,7 +60,7 @@ export interface DashboardModel {
     /** Usage per calendar day of the current cycle, oldest first, incl. today. */
     /** estimated = before the first recorded data point (spread linearly). */
     /** exhausted = allowance was already empty at the start of that day. */
-    daily: { date: string; used: number; weekend: boolean; estimated: boolean; exhausted: boolean }[];
+    daily: { date: string; used: number; offDay: boolean; estimated: boolean; exhausted: boolean }[];
     /** Budget per day for the chart reference line (entitlement / budget days of cycle). */
     planPerDay: number;
     /**
@@ -136,7 +136,8 @@ export interface DashboardModel {
   };
   settings: {
     display: 'remaining' | 'used' | 'percent' | 'dailyBudget';
-    countWeekends: boolean;
+    /** Work days (0 = Sunday … 6 = Saturday) the budget is spread over. */
+    workDays: number[];
     reserve: number;
     thresholds: number[];
     warningsEnabled: boolean;
@@ -204,7 +205,7 @@ export type DashboardCommand =
 /** Settings the webview may change directly. */
 export type DashboardSettingKey =
   | 'display'
-  | 'countWeekends'
+  | 'workDays'
   | 'reserve'
   | 'thresholds'
   | 'warningsEnabled'

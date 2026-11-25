@@ -94,7 +94,7 @@ export function modelSourceLabel(source: BtwModelSource): string {
     case 'chat':
       return vscode.l10n.t('same model as your chat');
     case 'included':
-      return vscode.l10n.t('included model · no premium requests');
+      return vscode.l10n.t("free model · doesn't use your allowance");
     default:
       return vscode.l10n.t('chosen by you');
   }
@@ -133,7 +133,7 @@ export async function chooseBtwModel(
   const pick = await vscode.window.showQuickPick(items, {
     title: vscode.l10n.t('Model for btw side questions'),
     placeHolder: vscode.l10n.t(
-      "Used when your chat's model can't be detected. Premium models use premium requests.",
+      "Used when your chat's model can't be detected. Premium models use your allowance.",
     ),
     matchOnDetail: true,
   });

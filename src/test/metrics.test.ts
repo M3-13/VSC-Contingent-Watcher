@@ -4,6 +4,8 @@ import { computeMetrics, usageCurve } from '../core/metrics';
 import { compact as compactHistory } from '../core/history';
 import { QuotaSnapshot } from '../core/types';
 
+const ALL_DAYS: number[] = [];
+
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
 
@@ -22,7 +24,7 @@ function snap(used: number, now: number): QuotaSnapshot {
   };
 }
 
-const opts = { countWeekends: true, reserve: 0 };
+const opts = { workDays: ALL_DAYS, reserve: 0 };
 
 test('curve starts at 0 at cycle start and ends at current usage', () => {
   const now = Date.UTC(2026, 10, 15, 12);

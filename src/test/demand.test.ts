@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { computeMetrics } from '../core/metrics';
 import { QuotaSnapshot } from '../core/types';
 
-const opts = { countWeekends: true, reserve: 0 };
+const ALL_DAYS: number[] = [];
+
+const opts = { workDays: ALL_DAYS, reserve: 0 };
 
 function snap(used: number, now: number, extra: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
   return {

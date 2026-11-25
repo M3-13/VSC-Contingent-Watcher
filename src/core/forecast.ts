@@ -9,9 +9,12 @@ function startOfUtcDay(t: number): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }
 
-function isWeekend(t: number): boolean {
-  const wd = new Date(t).getUTCDay();
-  return wd === 0 || wd === 6;
+/** Monday–Friday (0 = Sunday … 6 = Saturday). */
+export const DEFAULT_WORK_DAYS: readonly number[] = [1, 2, 3, 4, 5];
+
+/** True if the (UTC) day of t is a work day. An empty list counts every day. */
+export function isWorkDay(t: number, workDays: readonly number[]): boolean {
+  return workDays.length === 0 || workDays.includes(new Date(t).getUTCDay());
 }
 
 /** Cycle start = reset date minus one calendar month (UTC). */
@@ -21,15 +24,15 @@ export function cycleStart(reset: Date): Date {
 
 /**
  * Budget days between [from, to): a day counts fully, the current day counts
- * with its remaining fraction. Weekends are skipped unless countWeekends.
+ * with its remaining fraction. Only the given work days count.
  */
-export function budgetDays(from: number, to: number, countWeekends: boolean): number {
+export function budgetDays(from: number, to: number, workDays: readonly number[]): number {
   if (to <= from) {
     return 0;
   }
   let total = 0;
   for (let day = startOfUtcDay(from); day < to; day += DAY) {
-    if (!countWeekends && isWeekend(day)) {
+    if (!isWorkDay(day, workDays)) {
       continue;
     }
     const start = Math.max(day, from);
@@ -39,14 +42,14 @@ export function budgetDays(from: number, to: number, countWeekends: boolean): nu
   return total;
 }
 
-/** Adds n budget days to t (skipping weekends if requested). */
-export function addBudgetDays(t: number, n: number, countWeekends: boolean): Date {
+/** Adds n budget days to t (skipping days off). */
+export function addBudgetDays(t: number, n: number, workDays: readonly number[]): Date {
   let cursor = t;
   let left = n;
   // Hard cap to avoid infinite loops on bad input.
   for (let i = 0; i < 400 && left > 0; i++) {
     const dayEnd = startOfUtcDay(cursor) + DAY;
-    if (!countWeekends && isWeekend(cursor)) {
+    if (!isWorkDay(cursor, workDays)) {
       cursor = dayEnd;
       continue;
     }
@@ -61,7 +64,7 @@ export function addBudgetDays(t: number, n: number, countWeekends: boolean): Dat
 }
 
 /** Requests per budget day over the recent window, from history points. */
-export function recentBurnRate(history: HistoryPoint[], now: number, cycleStartMs: number, countWeekends: boolean): number | undefined {
+export function recentBurnRate(history: HistoryPoint[], now: number, cycleStartMs: number, workDays: readonly number[]): number | undefined {
   const windowStart = Math.max(cycleStartMs, now - RECENT_WINDOW_DAYS * DAY);
   const pts = history.filter((p) => p.t >= windowStart && p.t <= now).sort((a, b) => a.t - b.t);
   if (pts.length < 2) {
@@ -69,7 +72,7 @@ export function recentBurnRate(history: HistoryPoint[], now: number, cycleStartM
   }
   const first = pts[0];
   const last = pts[pts.length - 1];
-  const days = budgetDays(first.t, last.t, countWeekends);
+  const days = budgetDays(first.t, last.t, workDays);
   // Need at least ~half a budget day of data to be meaningful.
   if (days < 0.5) {
     return undefined;
@@ -87,9 +90,9 @@ export function computeForecast(
   const startMs = cycleStart(reset).getTime();
   const resetMs = reset.getTime();
 
-  const totalDays = Math.max(budgetDays(startMs, resetMs, opts.countWeekends), 1e-6);
-  const elapsedDays = budgetDays(startMs, Math.min(now, resetMs), opts.countWeekends);
-  const daysLeft = budgetDays(Math.max(now, startMs), resetMs, opts.countWeekends);
+  const totalDays = Math.max(budgetDays(startMs, resetMs, opts.workDays), 1e-6);
+  const elapsedDays = budgetDays(startMs, Math.min(now, resetMs), opts.workDays);
+  const daysLeft = budgetDays(Math.max(now, startMs), resetMs, opts.workDays);
   const cycleElapsed = Math.min(1, elapsedDays / totalDays);
 
   const usedPercent = snap.entitlement > 0 ? (snap.used / snap.entitlement) * 100 : 0;
@@ -100,12 +103,12 @@ export function computeForecast(
   const dailyBudget = daysLeft > 0 ? spendable / Math.max(daysLeft, 1) : 0;
 
   const average = elapsedDays >= 1 ? snap.used / elapsedDays : undefined;
-  const burnRate = recentBurnRate(history, now, startMs, opts.countWeekends) ?? average ?? 0;
+  const burnRate = recentBurnRate(history, now, startMs, opts.workDays) ?? average ?? 0;
   const projectedUsed = snap.used + burnRate * daysLeft;
 
   let exhaustionDate: Date | undefined;
   if (burnRate > 0 && projectedUsed > snap.entitlement && snap.remaining > 0) {
-    exhaustionDate = addBudgetDays(now, snap.remaining / burnRate, opts.countWeekends);
+    exhaustionDate = addBudgetDays(now, snap.remaining / burnRate, opts.workDays);
   }
 
   let status: Forecast['status'];

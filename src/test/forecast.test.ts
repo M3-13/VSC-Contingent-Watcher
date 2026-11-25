@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { addBudgetDays, budgetDays, computeForecast, cycleStart } from '../core/forecast';
 import { QuotaSnapshot } from '../core/types';
 
+const ALL_DAYS: number[] = [];
+const WEEKDAYS = [1, 2, 3, 4, 5];
+
 const utc = (m: number, d: number, h = 0) => Date.UTC(2026, m - 1, d, h);
 const DAY = 86400000;
 // Nov 2026: 1st is a Sunday, 30 days, 9 weekend days.
@@ -30,7 +33,7 @@ function snap(used: number, over: Partial<QuotaSnapshot> = {}): QuotaSnapshot {
   };
 }
 
-const OPTS = { countWeekends: true, reserve: 0 };
+const OPTS = { workDays: ALL_DAYS, reserve: 0 };
 
 test('cycleStart is one calendar month before reset', () => {
   assert.equal(cycleStart(new Date(DEC1)).getTime(), NOV1);
@@ -38,23 +41,23 @@ test('cycleStart is one calendar month before reset', () => {
 });
 
 test('budgetDays with and without weekends', () => {
-  assert.equal(budgetDays(NOV1, DEC1, true), 30);
-  assert.equal(budgetDays(NOV1, DEC1, false), 21);
-  assert.equal(budgetDays(DEC1, NOV1, true), 0);
-  assert.equal(budgetDays(NOV1, NOV1, true), 0);
+  assert.equal(budgetDays(NOV1, DEC1, ALL_DAYS), 30);
+  assert.equal(budgetDays(NOV1, DEC1, WEEKDAYS), 21);
+  assert.equal(budgetDays(DEC1, NOV1, ALL_DAYS), 0);
+  assert.equal(budgetDays(NOV1, NOV1, ALL_DAYS), 0);
 });
 
 test('budgetDays counts partial days', () => {
-  assert.equal(budgetDays(utc(11, 6, 12), utc(11, 9, 12), false), 1); // Fri half + Mon half
-  assert.equal(budgetDays(utc(11, 6, 12), utc(11, 9, 12), true), 3);
-  assert.equal(budgetDays(utc(11, 7, 6), utc(11, 8, 18), false), 0);
+  assert.equal(budgetDays(utc(11, 6, 12), utc(11, 9, 12), WEEKDAYS), 1); // Fri half + Mon half
+  assert.equal(budgetDays(utc(11, 6, 12), utc(11, 9, 12), ALL_DAYS), 3);
+  assert.equal(budgetDays(utc(11, 7, 6), utc(11, 8, 18), WEEKDAYS), 0);
 });
 
 test('addBudgetDays skips weekends', () => {
-  assert.equal(addBudgetDays(utc(11, 6, 12), 1, false).getTime(), utc(11, 9, 12));
-  assert.equal(addBudgetDays(utc(11, 6, 12), 1, true).getTime(), utc(11, 7, 12));
-  assert.equal(addBudgetDays(utc(11, 7, 10), 1, false).getTime(), utc(11, 10, 0)); // from Saturday
-  assert.equal(addBudgetDays(utc(11, 16), 7.5, true).getTime(), utc(11, 23, 12));
+  assert.equal(addBudgetDays(utc(11, 6, 12), 1, WEEKDAYS).getTime(), utc(11, 9, 12));
+  assert.equal(addBudgetDays(utc(11, 6, 12), 1, ALL_DAYS).getTime(), utc(11, 7, 12));
+  assert.equal(addBudgetDays(utc(11, 7, 10), 1, WEEKDAYS).getTime(), utc(11, 10, 0)); // from Saturday
+  assert.equal(addBudgetDays(utc(11, 16), 7.5, ALL_DAYS).getTime(), utc(11, 23, 12));
 });
 
 test('forecast: on track', () => {
@@ -105,10 +108,10 @@ test('forecast: unlimited', () => {
 
 test('forecast: reserve reduces daily budget', () => {
   const base = computeForecast(snap(140), [], OPTS, NOW);
-  const withReserve = computeForecast(snap(140), [], { countWeekends: true, reserve: 40 }, NOW);
+  const withReserve = computeForecast(snap(140), [], { workDays: ALL_DAYS, reserve: 40 }, NOW);
   close(base.dailyBudget, 160 / 15);
   close(withReserve.dailyBudget, 120 / 15);
-  const over = computeForecast(snap(140), [], { countWeekends: true, reserve: 1000 }, NOW);
+  const over = computeForecast(snap(140), [], { workDays: ALL_DAYS, reserve: 1000 }, NOW);
   assert.equal(over.dailyBudget, 0);
 });
 
@@ -128,7 +131,7 @@ test('forecast: single history point falls back to average', () => {
 });
 
 test('forecast: weekdays only changes days left', () => {
-  const f = computeForecast(snap(100), [], { countWeekends: false, reserve: 0 }, NOW);
+  const f = computeForecast(snap(100), [], { workDays: WEEKDAYS, reserve: 0 }, NOW);
   // Nov 16..Dec 1 contains 11 workdays (16-20, 23-27, 30).
   close(f.daysLeft, 11);
   close(f.cycleElapsed, 10 / 21);
@@ -139,4 +142,13 @@ test('forecast: start of cycle has no usage and is on track', () => {
   assert.equal(f.status, 'onTrack');
   assert.equal(f.paceRatio, 0);
   assert.equal(f.burnRate, 0);
+});
+
+test('part-time work days: fewer budget days, higher daily budget', () => {
+  // November 2026: Mon/Tue/Thu = 13 days (Nov 2 is a Monday).
+  const NOV1 = Date.UTC(2026, 10, 1);
+  const DEC1 = Date.UTC(2026, 11, 1);
+  assert.equal(budgetDays(NOV1, DEC1, [1, 2, 4]), 13);
+  // Wednesday is a day off: one budget day from Tue noon ends Thu noon.
+  assert.equal(addBudgetDays(Date.UTC(2026, 10, 3, 12), 1, [1, 2, 4]).getTime(), Date.UTC(2026, 10, 5, 12));
 });

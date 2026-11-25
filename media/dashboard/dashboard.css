@@ -573,12 +573,12 @@ button { font: inherit; color: inherit; }
   min-height: 132px;
 }
 .c-svg { display: block; overflow: visible; }
-.c-weekend { fill: color-mix(in srgb, var(--fg) 4.5%, transparent); }
+.c-off { fill: color-mix(in srgb, var(--fg) 4.5%, transparent); }
 .c-empty { fill: url(#c-empty-hatch); }
 .c-empty-line { stroke: color-mix(in srgb, var(--fg) 13%, transparent); stroke-width: 1.5; }
 .c-base { stroke: var(--hairline); stroke-width: 1; }
 .c-bar { fill: var(--bar); transition: opacity 0.15s ease; }
-.c-bar.weekend { fill: var(--bar-soft); }
+.c-bar.off { fill: var(--bar-soft); }
 .c-bar.today { fill: var(--bar-today); }
 .c-bar.est {
   fill: url(#c-hatch);
@@ -625,7 +625,7 @@ button { font: inherit; color: inherit; }
 .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
 .sw-plan { height: 0; width: 14px; border-top: 1.5px dashed color-mix(in srgb, var(--fg) 65%, transparent); border-radius: 0; }
 .sw-today { background: var(--bar-today); }
-.sw-weekend { background: var(--bar-soft); }
+.sw-off { background: var(--bar-soft); }
 .sw-ghost {
   background: color-mix(in srgb, var(--status) 9%, transparent);
   border: 1px dashed color-mix(in srgb, var(--status) 60%, transparent);
@@ -709,6 +709,33 @@ button { font: inherit; color: inherit; }
 
 .field { display: grid; gap: 6px; }
 .field-label { font-size: 12px; color: var(--muted); }
+.field-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.field-side { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.daychips { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.daychip {
+  min-width: 0;
+  height: 26px;
+  padding: 0 2px;
+  border: 1px solid var(--card-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.daychip:hover { color: var(--fg); background: var(--hover); }
+.daychip[aria-pressed='true'] {
+  background: var(--vscode-button-background);
+  border-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+.has-accent .daychip[aria-pressed='true'] { background: var(--accent-solid); border-color: var(--accent-solid); color: var(--accent-fg); }
+.daychip[aria-disabled='true'] { cursor: default; }
 .field-hint { opacity: 0.8; }
 .field.dim { opacity: 0.55; }
 
@@ -1296,6 +1323,10 @@ body.vscode-high-contrast-light .tchip {
 }
 body.vscode-high-contrast .chip,
 body.vscode-high-contrast-light .chip { color: var(--fg); }
+body.vscode-high-contrast .daychip,
+body.vscode-high-contrast-light .daychip { border-color: var(--vscode-contrastBorder); }
+body.vscode-high-contrast .daychip[aria-pressed='true'],
+body.vscode-high-contrast-light .daychip[aria-pressed='true'],
 body.vscode-high-contrast .segmented [role='radio'][aria-checked='true'],
 body.vscode-high-contrast-light .segmented [role='radio'][aria-checked='true'] {
   outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));

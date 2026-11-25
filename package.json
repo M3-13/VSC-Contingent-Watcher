@@ -335,10 +335,36 @@
           "default": true,
           "markdownDescription": "%cfg.warningsEnabled%"
         },
+        "contingentWatcher.budget.workDays": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1,
+          "default": [
+            "mon",
+            "tue",
+            "wed",
+            "thu",
+            "fri"
+          ],
+          "markdownDescription": "%cfg.workDays%"
+        },
         "contingentWatcher.budget.countWeekends": {
           "type": "boolean",
           "default": false,
-          "markdownDescription": "%cfg.countWeekends%"
+          "markdownDescription": "%cfg.countWeekends%",
+          "markdownDeprecationMessage": "%cfg.countWeekends.deprecated%"
         },
         "contingentWatcher.budget.reserve": {
           "type": "number",

@@ -36,7 +36,7 @@ export class State {
     const newCycle = prev && (cycleKey(prev.resetDate) !== cycleKey(snap.resetDate) || snap.used < prev.used);
     if (newCycle && prev) {
       // Archive the finished cycle before its history is dropped.
-      const summary = summarizeCycle(prev, history, { countWeekends: true, reserve: 0 }, prev.fetchedAt);
+      const summary = summarizeCycle(prev, history, { workDays: [], reserve: 0 }, prev.fetchedAt);
       await this.mem.update(K_CYCLES, addCycle(this.cycles, summary));
       history = [];
     }

@@ -8,6 +8,8 @@ import { computeForecast } from '../core/forecast';
 import { expectedSurplus } from '../core/surplus';
 import { QuotaSnapshot } from '../core/types';
 
+const ALL_DAYS: number[] = [];
+
 const DAY = 86_400_000;
 
 function snap(used: number, now: number, resetDate = '2026-12-01T00:00:00.000Z'): QuotaSnapshot {
@@ -25,7 +27,7 @@ function snap(used: number, now: number, resetDate = '2026-12-01T00:00:00.000Z')
   };
 }
 
-const opts = { countWeekends: true, reserve: 0 };
+const opts = { workDays: ALL_DAYS, reserve: 0 };
 
 test('surplus: shown in the last week when much would expire', () => {
   const now = Date.UTC(2026, 10, 27);

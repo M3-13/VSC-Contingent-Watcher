@@ -2,13 +2,13 @@ export type QuotaUnit = 'requests' | 'credits';
 
 /** Normalised quota snapshot, independent of the data source. */
 export interface QuotaSnapshot {
-  /** Monthly premium request allowance. */
+  /** Monthly allowance (credits or premium requests, see unit). */
   entitlement: number;
-  /** Premium requests used in the current cycle. */
+  /** Allowance used in the current cycle. */
   used: number;
-  /** Premium requests remaining in the current cycle (never negative). */
+  /** Allowance remaining in the current cycle (never negative). */
   remaining: number;
-  /** True if the plan has no premium request limit. */
+  /** True if the plan has no limit. */
   unlimited: boolean;
   /** Paid overage enabled (requests beyond the allowance are billed). */
   overagePermitted: boolean;
@@ -33,7 +33,8 @@ export interface HistoryPoint {
 }
 
 export interface ForecastOptions {
-  countWeekends: boolean;
+  /** Work days (0 = Sunday … 6 = Saturday); the budget is spread over these only. */
+  workDays: readonly number[];
   /** Requests to keep in reserve; excluded from the daily budget. */
   reserve: number;
 }
