@@ -11,6 +11,10 @@
 
   /** @type {any} */
   let model = null;
+  /** A refresh was clicked and its result hasn't arrived yet (instant feedback). */
+  let refreshPending = false;
+  /** Show "updated just now" until this time (epoch ms). */
+  let refreshedFlashUntil = 0;
   let introPending = true;
   let addingThreshold = false;
   let addingModel = false;
@@ -263,11 +267,17 @@
   function header() {
     const q = model.quota;
     const plan = q && q.plan ? `<span class="badge" title="${t('plan')}">${esc(q.plan.charAt(0).toUpperCase() + q.plan.slice(1))}</span>` : '';
-    const updated = q ? `<span class="updated" id="updated">${esc(raw('updated', relativePast(q.fetchedAt)))}</span>` : '';
+    const flash = Date.now() < refreshedFlashUntil;
+    const updated = q
+      ? `<span class="updated${flash ? ' flash' : ''}" id="updated" role="status" aria-live="polite">${
+          flash ? `${icon.check || '✓'} ${esc(t('refreshedNow'))}` : esc(raw('updated', relativePast(q.fetchedAt)))
+        }</span>`
+      : '';
+    const busy = model.refreshing || refreshPending;
     const stale = model.stale ? `<span class="badge badge-warn" title="${t('offlineHint')}">${icon.history}${t('offline')}</span>` : '';
     return `<header class="topbar">
       <div class="topbar-meta">${updated}${stale}${plan}</div>
-      <button class="icon-btn" data-cmd="refresh" data-k="refresh-top" title="${t('refresh')}" aria-label="${t('refresh')}">${icon.refresh}</button>
+      <button class="icon-btn${busy ? ' spinning' : ''}" data-cmd="refresh" data-k="refresh-top" title="${t('refresh')}" aria-label="${t('refresh')}" aria-busy="${busy}"${busy ? ' disabled' : ''}>${icon.refresh}</button>
     </header>`;
   }
 
@@ -414,7 +424,7 @@
       return '';
     }
     const anyEst = m.daily.some((d) => d.estimated);
-    const anyEmpty = m.daily.some((d) => d.exhausted);
+    const anyEmpty = m.daily.some((d) => d.exhausted) || (!model.quota.unlimited && model.quota.entitlement > 0 && model.quota.remaining <= 0);
     const anyOff = m.daily.some((d) => d.offDay);
     const showPlan = !model.quota.unlimited && m.planPerDay > 0;
     const showBudget = !model.quota.unlimited && model.forecast && model.forecast.dailyBudget > 0;
@@ -446,9 +456,14 @@
     const days = m.daily.map((d) => ({ ...d, day: parseDay(d.date), future: false }));
     // Future calendar days until the reset, shown as ghosts at today's daily budget.
     const last = days[days.length - 1].day;
-    const resetDay = startOfDay(new Date(q.resetDate));
-    // Once the allowance is empty, the rest of the cycle stays empty too.
-    const emptyNow = !q.unlimited && q.remaining <= 0 && m.daily.some((d) => d.exhausted);
+    // Exclusive end: the reset's calendar date (UTC, the cycle is a UTC month)
+    // as a local day. startOfDay(local reset) would drop the last cycle day
+    // west of UTC, where 1 Dec 00:00Z is still 30 Nov.
+    const r = new Date(q.resetDate);
+    const resetDay = new Date(r.getUTCFullYear(), r.getUTCMonth(), r.getUTCDate());
+    // Once the allowance is empty, the rest of the cycle stays empty too
+    // (also on the day it ran out, when no past bucket is `exhausted` yet).
+    const emptyNow = !q.unlimited && q.entitlement > 0 && q.remaining <= 0;
     for (let d = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1); d < resetDay && days.length < 42; d.setDate(d.getDate() + 1)) {
       days.push({ date: '', used: 0, offDay: !workDays.includes(d.getDay()), estimated: false, exhausted: emptyNow, day: new Date(d), future: true });
     }
@@ -1420,6 +1435,14 @@
     }
     const cmd = el.getAttribute('data-cmd');
     if (cmd) {
+      if (cmd === 'refresh') {
+        if (refreshPending || model.refreshing) {
+          return;
+        }
+        // Instant feedback: spin every refresh button right away.
+        refreshPending = true;
+        document.querySelectorAll('[data-cmd="refresh"]').forEach((b) => b.classList.add('spinning'));
+      }
       post({ type: 'command', command: cmd });
       return;
     }
@@ -1623,7 +1646,16 @@
   window.addEventListener('message', (ev) => {
     const msg = ev.data;
     if (msg && msg.type === 'model' && msg.model) {
+      const finished = (refreshPending || (model && model.refreshing)) && !msg.model.refreshing;
       model = msg.model;
+      if (msg.model.refreshing) {
+        refreshPending = false; // the extension took over showing progress
+      }
+      if (finished) {
+        refreshPending = false;
+        refreshedFlashUntil = Date.now() + 2500;
+        setTimeout(render, 2600);
+      }
       nfCache.clear();
       render();
     }

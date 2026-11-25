@@ -1349,3 +1349,12 @@ body.vscode-high-contrast .icon-btn:hover,
 body.vscode-high-contrast-light .icon-btn:hover {
   outline: 1px dashed var(--vscode-contrastActiveBorder, var(--vscode-focusBorder));
 }
+
+/* Refresh feedback */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning .i, .icon-btn.spinning svg { animation: spin 0.9s linear infinite; transform-origin: 50% 50%; }
+.icon-btn[disabled] { cursor: progress; }
+.updated.flash { color: var(--vscode-charts-green, var(--vscode-foreground)); font-weight: 600; transition: color 0.3s; }
+@media (prefers-reduced-motion: reduce) {
+  .spinning .i, .icon-btn.spinning svg { animation: pulse 1.2s ease-in-out infinite; }
+}

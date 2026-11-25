@@ -8,6 +8,8 @@ export interface DashboardModel {
   state: 'loading' | 'ok' | 'signedOut' | 'noCopilot' | 'error';
   /** Data is from cache because the last refresh failed. */
   stale: boolean;
+  /** A user-triggered refresh is running (show progress). */
+  refreshing: boolean;
   errorMessage?: string;
   /** Auth provider used, e.g. "github" or "github-enterprise". */
   provider?: string;

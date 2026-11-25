@@ -169,7 +169,7 @@ export const TIPS: Tip[] = [
   {
     id: "surplusInstructions",
     when: ["surplus", "lateMonth"],
-    text: "Spend spare credits letting an agent draft your copilot-instructions.md and prompt files, then trim them by hand.",
+    text: "Spend spare allowance letting an agent draft your copilot-instructions.md and prompt files, then trim them by hand.",
   },
   {
     id: "cloudAgentBatch",

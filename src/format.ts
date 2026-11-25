@@ -5,7 +5,17 @@ export function fmt(n: number): string {
   if (!Number.isFinite(n)) {
     return '∞';
   }
-  return n >= 100 || Number.isInteger(n) ? Math.round(n).toLocaleString() : n.toFixed(1);
+  const digits = n >= 100 || Number.isInteger(n) ? 0 : 1;
+  const v = digits === 0 ? Math.round(n) : n;
+  // Format with the VS Code display language and the same options as the
+  // dashboard (otherwise e.g. "1,300" in a German status bar but "1.300" in
+  // the dashboard). No trailing ".0" (e.g. 47.99999 → "48").
+  const o = { minimumFractionDigits: 0, maximumFractionDigits: digits };
+  try {
+    return v.toLocaleString(vscode.env.language, o);
+  } catch {
+    return v.toLocaleString(undefined, o);
+  }
 }
 
 export function unitLabel(snap: QuotaSnapshot): string {

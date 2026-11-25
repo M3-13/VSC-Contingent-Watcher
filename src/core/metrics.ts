@@ -1,4 +1,4 @@
-import { budgetDays, cycleStart } from './forecast';
+import { budgetDays, cycleStart, localDayStart, nextLocalDay, paceDays } from './forecast';
 import { ForecastOptions, HistoryPoint, QuotaSnapshot } from './types';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -41,19 +41,6 @@ function timeReaching(at: (t: number) => number, from: number, to: number, level
     }
   }
   return hi;
-}
-
-function localDayStart(t: number): number {
-  const d = new Date(t);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
-function nextLocalDay(t: number): number {
-  const d = new Date(t);
-  d.setDate(d.getDate() + 1);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
 }
 
 function localIsoDate(t: number): string {
@@ -105,10 +92,12 @@ export function computeMetrics(
   const totalDays = Math.max(budgetDays(start, resetMs, opts.workDays), 1e-6);
   const elapsedDays = budgetDays(start, Math.min(now, resetMs), opts.workDays);
   const planPerDay = snap.entitlement / totalDays;
+  // Averages are day-granular like the pace: today counts as a full budget day.
+  const paceElapsed = paceDays(start, resetMs, now, opts.workDays);
 
   const today = Math.max(0, snap.used - at(Math.max(start, localDayStart(now))));
   const last7Days = Math.max(0, snap.used - at(Math.max(start, now - 7 * DAY)));
-  const cycleAverage = snap.used / Math.max(1, elapsedDays);
+  const cycleAverage = snap.used / Math.max(1, paceElapsed);
 
   const expected = snap.entitlement * Math.min(1, elapsedDays / totalDays);
   const buffer = expected - snap.used;
@@ -157,14 +146,14 @@ export function computeMetrics(
     let exhaustedOn: number | undefined;
     if (snap.overageCount > 0) {
       // Paid overage: real usage keeps counting beyond the allowance.
-      rate = elapsedDays >= 1 ? (snap.used + snap.overageCount) / elapsedDays : undefined;
+      rate = paceElapsed >= 1 - 1e-9 ? (snap.used + snap.overageCount) / paceElapsed : undefined;
     } else if (snap.remaining <= 0) {
       // Capped at the allowance: use the pace until it ran out.
       exhaustedOn = timeReaching(at, start, now, snap.entitlement - 1e-6);
       const days = exhaustedOn !== undefined ? budgetDays(start, exhaustedOn, opts.workDays) : 0;
       rate = days >= 0.5 ? snap.entitlement / days : undefined;
     } else {
-      rate = elapsedDays >= 1 ? snap.used / elapsedDays : undefined;
+      rate = paceElapsed >= 1 - 1e-9 ? snap.used / paceElapsed : undefined;
     }
     if (rate === undefined) {
       return undefined;
