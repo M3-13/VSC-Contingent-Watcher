@@ -11,6 +11,10 @@
 
   /** @type {any} */
   let model = null;
+  /** A refresh was clicked and its result hasn't arrived yet (instant feedback). */
+  let refreshPending = false;
+  /** Show "updated just now" until this time (epoch ms). */
+  let refreshedFlashUntil = 0;
   let introPending = true;
   let addingThreshold = false;
   let addingModel = false;
@@ -263,11 +267,17 @@
   function header() {
     const q = model.quota;
     const plan = q && q.plan ? `<span class="badge" title="${t('plan')}">${esc(q.plan.charAt(0).toUpperCase() + q.plan.slice(1))}</span>` : '';
-    const updated = q ? `<span class="updated" id="updated">${esc(raw('updated', relativePast(q.fetchedAt)))}</span>` : '';
+    const flash = Date.now() < refreshedFlashUntil;
+    const updated = q
+      ? `<span class="updated${flash ? ' flash' : ''}" id="updated" role="status" aria-live="polite">${
+          flash ? `${icon.check || '✓'} ${esc(t('refreshedNow'))}` : esc(raw('updated', relativePast(q.fetchedAt)))
+        }</span>`
+      : '';
+    const busy = model.refreshing || refreshPending;
     const stale = model.stale ? `<span class="badge badge-warn" title="${t('offlineHint')}">${icon.history}${t('offline')}</span>` : '';
     return `<header class="topbar">
       <div class="topbar-meta">${updated}${stale}${plan}</div>
-      <button class="icon-btn" data-cmd="refresh" data-k="refresh-top" title="${t('refresh')}" aria-label="${t('refresh')}">${icon.refresh}</button>
+      <button class="icon-btn${busy ? ' spinning' : ''}" data-cmd="refresh" data-k="refresh-top" title="${t('refresh')}" aria-label="${t('refresh')}" aria-busy="${busy}"${busy ? ' disabled' : ''}>${icon.refresh}</button>
     </header>`;
   }
 
@@ -1420,6 +1430,14 @@
     }
     const cmd = el.getAttribute('data-cmd');
     if (cmd) {
+      if (cmd === 'refresh') {
+        if (refreshPending || model.refreshing) {
+          return;
+        }
+        // Instant feedback: spin every refresh button right away.
+        refreshPending = true;
+        document.querySelectorAll('[data-cmd="refresh"]').forEach((b) => b.classList.add('spinning'));
+      }
       post({ type: 'command', command: cmd });
       return;
     }
@@ -1623,7 +1641,16 @@
   window.addEventListener('message', (ev) => {
     const msg = ev.data;
     if (msg && msg.type === 'model' && msg.model) {
+      const finished = (refreshPending || (model && model.refreshing)) && !msg.model.refreshing;
       model = msg.model;
+      if (msg.model.refreshing) {
+        refreshPending = false; // the extension took over showing progress
+      }
+      if (finished) {
+        refreshPending = false;
+        refreshedFlashUntil = Date.now() + 2500;
+        setTimeout(render, 2600);
+      }
       nfCache.clear();
       render();
     }

@@ -18,6 +18,7 @@ export function dashboardStrings(): Record<string, string> {
     offline: vscode.l10n.t('Offline'),
     offlineHint: vscode.l10n.t('The last refresh failed. Showing cached data.'),
     refresh: vscode.l10n.t('Refresh'),
+    refreshedNow: vscode.l10n.t('Updated just now'),
 
     // Hero
     leftOf: vscode.l10n.t('left of {0} {1}'),

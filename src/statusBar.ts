@@ -17,6 +17,7 @@ export type ViewState =
 export class StatusBar implements vscode.Disposable {
   private item: vscode.StatusBarItem;
   private alignment: Config['alignment'];
+  private refreshing = false;
 
   constructor(cfg: Config) {
     this.alignment = cfg.alignment;
@@ -33,7 +34,8 @@ export class StatusBar implements vscode.Disposable {
     return item;
   }
 
-  render(state: ViewState, cfg: Config): void {
+  render(state: ViewState, cfg: Config, refreshing = false): void {
+    this.refreshing = refreshing;
     if (cfg.alignment !== this.alignment) {
       this.item.dispose();
       this.alignment = cfg.alignment;
@@ -110,7 +112,7 @@ export class StatusBar implements vscode.Disposable {
     // With a custom colour only the chosen display is shown in that colour;
     // the theme's warning background is used only with the default colour.
     const icon = iconFor(cfg.statusBarIcon, fillLevel(snap.remaining, snap.entitlement));
-    item.text = `${[icon, value].filter(Boolean).join(' ')}${stale ? ' $(history)' : ''}`;
+    item.text = `${[icon, value].filter(Boolean).join(' ')}${stale ? ' $(history)' : ''}${this.refreshing ? ' $(sync~spin)' : ''}`;
 
     if (warn && !custom) {
       item.backgroundColor = new vscode.ThemeColor(severe ? 'statusBarItem.errorBackground' : 'statusBarItem.warningBackground');

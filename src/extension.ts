@@ -61,6 +61,10 @@ class Controller implements vscode.Disposable {
   private view: ViewState = { kind: 'loading' };
   private provider: ProviderId | undefined;
   private inFlight: Promise<void> | undefined;
+  /** Start of the last refresh attempt (epoch ms), for the interval check. */
+  private lastAttempt = 0;
+  /** A manual refresh is running (spinner in status bar and dashboard). */
+  private manualRefreshing = false;
   readonly activity: ActivityTracker;
   readonly billing: BillingService;
   readonly copilot = new CopilotOptions();
@@ -100,7 +104,7 @@ class Controller implements vscode.Disposable {
 
   /** Pushes the current state to the status bar and the dashboard. */
   render(): void {
-    this.bar.render(this.view, this.cfg);
+    this.bar.render(this.view, this.cfg, this.manualRefreshing);
     this.dashboard.update(this.model());
   }
 
@@ -113,12 +117,16 @@ class Controller implements vscode.Disposable {
     if (this.timer) {
       clearInterval(this.timer);
     }
+    // Check every minute whether the interval is due. Unlike a plain interval
+    // timer this stays correct after sleep/standby and while VS Code is in the
+    // background or another window has focus.
     this.timer = setInterval(() => {
-      // Don't poll while the window is in the background; refresh on focus instead.
-      if (vscode.window.state.focused) {
+      if (Date.now() - this.lastAttempt >= this.cfg.refreshIntervalMinutes * 60_000) {
         void this.refresh();
       }
-    }, this.cfg.refreshIntervalMinutes * 60_000);
+    }, 60_000);
+    // Never keep a process alive just for this check (matters for tests).
+    this.timer.unref?.();
   }
 
   onConfigChanged(): void {
@@ -144,7 +152,25 @@ class Controller implements vscode.Disposable {
     return this.inFlight;
   }
 
+  /** User-triggered refresh: shows a spinner until done (at least briefly, so it's noticeable). */
+  async manualRefresh(): Promise<void> {
+    this.manualRefreshing = true;
+    this.render();
+    const started = Date.now();
+    try {
+      await this.refresh();
+    } finally {
+      const rest = 600 - (Date.now() - started);
+      if (rest > 0) {
+        await new Promise((r) => setTimeout(r, rest));
+      }
+      this.manualRefreshing = false;
+      this.render();
+    }
+  }
+
   private async doRefresh(interactive: boolean): Promise<void> {
+    this.lastAttempt = Date.now();
     const res = await this.service.fetch(interactive);
     this.provider = res.target.provider;
     switch (res.kind) {
@@ -210,6 +236,7 @@ class Controller implements vscode.Disposable {
     const model: DashboardModel = {
       state: data ? 'ok' : v.kind,
       stale: v.kind === 'error' && !!v.stale,
+      refreshing: this.manualRefreshing,
       errorMessage: v.kind === 'error' ? v.message : undefined,
       provider: this.provider,
       locale: vscode.env.language,
@@ -377,7 +404,7 @@ class Controller implements vscode.Disposable {
   async onDashboardCommand(c: DashboardCommand): Promise<unknown> {
     switch (c) {
       case 'refresh':
-        return this.refresh();
+        return this.manualRefresh();
       case 'signIn':
         return this.signIn();
       case 'showLog':
@@ -487,7 +514,7 @@ export function activate(context: vscode.ExtensionContext): void {
     registerBtwParticipant(context, log),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
-    vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.refresh()),
+    vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.manualRefresh()),
     vscode.commands.registerCommand('contingentWatcher.signIn', () => ctl.signIn()),
     vscode.commands.registerCommand('contingentWatcher.showDetails', openDashboard),
     vscode.commands.registerCommand('contingentWatcher.showTips', openDashboard),
