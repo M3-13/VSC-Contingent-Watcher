@@ -415,6 +415,7 @@
     }
     const anyEst = m.daily.some((d) => d.estimated);
     const anyEmpty = m.daily.some((d) => d.exhausted);
+    const anyOff = m.daily.some((d) => d.offDay);
     const showPlan = !model.quota.unlimited && m.planPerDay > 0;
     const showBudget = !model.quota.unlimited && model.forecast && model.forecast.dailyBudget > 0;
     const legend = [
@@ -423,7 +424,7 @@
       showBudget ? `<span class="lg"><span class="sw sw-ghost"></span>${t('dailyBudget')}</span>` : '',
       anyEst ? `<span class="lg"><span class="sw sw-est"></span>${t('legendEstimated')}</span>` : '',
       anyEmpty ? `<span class="lg"><span class="sw sw-empty"></span>${t('legendEmpty')}</span>` : '',
-      `<span class="lg"><span class="sw sw-weekend"></span>${t('legendWeekend')}</span>`,
+      anyOff ? `<span class="lg"><span class="sw sw-off"></span>${t('legendOffDay')}</span>` : '',
     ].join('');
     return `<section class="card chart-card st-${esc((model.forecast && model.forecast.status) || 'onTrack')}" aria-labelledby="chart-title">
       <div class="card-head"><h2 id="chart-title">${icon.bars}${t('dailyUsage')}</h2></div>
@@ -441,7 +442,7 @@
     const m = model.metrics;
     const q = model.quota;
     const f = model.forecast;
-    const settings = model.settings || {};
+    const workDays = (model.settings && model.settings.workDays) || [1, 2, 3, 4, 5];
     const days = m.daily.map((d) => ({ ...d, day: parseDay(d.date), future: false }));
     // Future calendar days until the reset, shown as ghosts at today's daily budget.
     const last = days[days.length - 1].day;
@@ -449,8 +450,7 @@
     // Once the allowance is empty, the rest of the cycle stays empty too.
     const emptyNow = !q.unlimited && q.remaining <= 0 && m.daily.some((d) => d.exhausted);
     for (let d = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1); d < resetDay && days.length < 42; d.setDate(d.getDate() + 1)) {
-      const wk = d.getDay() === 0 || d.getDay() === 6;
-      days.push({ date: '', used: 0, weekend: wk, estimated: false, exhausted: emptyNow, day: new Date(d), future: true });
+      days.push({ date: '', used: 0, offDay: !workDays.includes(d.getDay()), estimated: false, exhausted: emptyNow, day: new Date(d), future: true });
     }
     const budget = !q.unlimited && f ? f.dailyBudget : 0;
     const todayIdx = m.daily.length - 1;
@@ -474,15 +474,15 @@
     days.forEach((d, i) => {
       const x0 = i * col;
       const cx = x0 + col / 2;
-      if (d.weekend) {
-        shade += `<rect class="c-weekend" x="${x0.toFixed(2)}" y="${top}" width="${col.toFixed(2)}" height="${plotH}"/>`;
+      if (d.offDay) {
+        shade += `<rect class="c-off" x="${x0.toFixed(2)}" y="${top}" width="${col.toFixed(2)}" height="${plotH}"/>`;
       }
       if (d.exhausted) {
         shade += `<rect class="c-empty" x="${x0.toFixed(2)}" y="${top}" width="${col.toFixed(2)}" height="${plotH}"/>`;
       }
       let tip;
       if (d.future) {
-        const b = d.weekend && !settings.countWeekends ? 0 : budget;
+        const b = d.offDay ? 0 : budget;
         if (b > 0) {
           const h = Math.max(2, base - y(b));
           bars += `<rect class="c-ghost" x="${(cx - bw / 2).toFixed(2)}" y="${(base - h).toFixed(2)}" width="${bw.toFixed(2)}" height="${h.toFixed(2)}" rx="2"/>`;
@@ -490,7 +490,7 @@
         tip = d.exhausted ? `${fmtDate(d.day, fullFmt)} · ${raw('emptyNote')}` : `${fmtDate(d.day, fullFmt)} · ${raw('dailyBudget')}: ${fmt(b)}`;
       } else {
         const h = d.used > 0 ? Math.max(2, base - y(d.used)) : 0;
-        const cls = ['c-bar', i === todayIdx ? 'today' : '', d.weekend ? 'weekend' : '', d.estimated ? 'est' : '']
+        const cls = ['c-bar', i === todayIdx ? 'today' : '', d.offDay ? 'off' : '', d.estimated ? 'est' : '']
           .filter(Boolean)
           .join(' ');
         if (h > 0) {
@@ -500,7 +500,7 @@
         }
         const notes = [
           i === todayIdx ? raw('legendToday') : '',
-          d.weekend ? raw('weekendNote') : '',
+          d.offDay ? raw('offDayNote') : '',
           d.estimated ? raw('estimatedNote') : '',
           d.exhausted ? raw('emptyNote') : '',
         ]
@@ -879,6 +879,32 @@
     )}</div>`;
   }
 
+  /** Monday-first weekday numbers (0 = Sunday … 6 = Saturday). */
+  const WEEK = [1, 2, 3, 4, 5, 6, 0];
+
+  function weekdayName(n, style) {
+    // 2024-01-07 was a Sunday, so day 7 + n is weekday n.
+    const d = new Date(2024, 0, 7 + n);
+    return safe(() => d.toLocaleDateString(loc(), { weekday: style })) || String(n);
+  }
+
+  /** Work-day picker: the daily budget is spread over these days only. */
+  function workDaysField() {
+    const days = model.settings.workDays || [1, 2, 3, 4, 5];
+    const n = days.length;
+    const chips = WEEK.map((d) => {
+      const on = days.includes(d);
+      return `<button class="daychip" aria-pressed="${on}" data-action="toggleDay" data-value="${d}" data-k="day-${d}" title="${esc(
+        weekdayName(d, 'long'),
+      )}" aria-label="${esc(weekdayName(d, 'long'))}" ${on && n === 1 ? 'aria-disabled="true"' : ''}>${esc(weekdayName(d, 'short'))}</button>`;
+    }).join('');
+    return `<div class="field"><div class="field-top"><span class="field-label" id="lbl-workdays">${t('workDays')}</span><span class="field-side">${
+      n === 1 ? t('daysPerWeekOne') : t('daysPerWeek', fmt(n))
+    }</span></div>
+      <div class="daychips" role="group" aria-labelledby="lbl-workdays">${chips}</div>
+      <span class="row-hint">${t('workDaysHint')}</span></div>`;
+  }
+
   function settingsPanel() {
     const s = model.settings;
     const thresholds = (s.thresholds || []).slice().sort((a, b) => a - b);
@@ -957,7 +983,7 @@
     const budget = group(
       icon.target,
       t('budgetGroup'),
-      `${row('countWeekends', s.countWeekends, t('countWeekends'), t('countWeekendsHint'))}
+      `${workDaysField()}
       <div class="row"><div class="row-text"><label class="row-label" for="reserve">${t('reserve')}</label><span class="row-hint">${t('reserveHint')}</span></div>
         <input class="num" id="reserve" type="number" min="0" step="1" inputmode="numeric" value="${esc(s.reserve)}" data-k="reserve"></div>`,
     );
@@ -1419,6 +1445,19 @@
         addingThreshold = true;
         render();
         break;
+      case 'toggleDay': {
+        const d = Number(el.getAttribute('data-value'));
+        const cur = model.settings.workDays || [1, 2, 3, 4, 5];
+        const next = cur.includes(d) ? cur.filter((x) => x !== d) : cur.concat(d);
+        // At least one work day must stay selected.
+        if (next.length > 0) {
+          setSetting(
+            'workDays',
+            next.slice().sort((a, b) => a - b),
+          );
+        }
+        break;
+      }
       case 'addModel':
         addingModel = true;
         render();

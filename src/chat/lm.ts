@@ -42,7 +42,7 @@ export async function pickIncludedModel(): Promise<ModelPick> {
 export function noModelMarkdown(families: readonly string[]): string {
   return [
     vscode.l10n.t(
-      'None of your preferred included models is available, so I did not answer, to avoid using a premium request by accident.',
+      'None of your preferred free models is available, so I did not answer, to avoid using your allowance by accident.',
     ),
     vscode.l10n.t('Available model families: {0}', families.length ? families.map((f) => `\`${f}\``).join(', ') : '–'),
     vscode.l10n.t('Set your preferred families in the setting `contingentWatcher.chat.preferredModels`.'),

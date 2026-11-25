@@ -10,7 +10,8 @@ export interface Config {
   thresholds: number[];
   paceWarning: boolean;
   warningsEnabled: boolean;
-  countWeekends: boolean;
+  /** Work days, 0 = Sunday … 6 = Saturday. */
+  workDays: number[];
   reserve: number;
   tipsEnabled: boolean;
   accent: string;
@@ -21,6 +22,23 @@ export interface Config {
 }
 
 export const SECTION = 'contingentWatcher';
+
+export const WEEKDAY_IDS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+
+/** Reads budget.workDays; falls back to the old countWeekends flag, then Mon–Fri. */
+function readWorkDays(c: vscode.WorkspaceConfiguration): number[] {
+  const configured = c.inspect<string[]>('budget.workDays');
+  const explicit = configured?.workspaceFolderValue ?? configured?.workspaceValue ?? configured?.globalValue;
+  if (Array.isArray(explicit)) {
+    const days = [...new Set(explicit.map((d) => WEEKDAY_IDS.indexOf(String(d).toLowerCase() as (typeof WEEKDAY_IDS)[number])))]
+      .filter((d) => d >= 0)
+      .sort((a, b) => a - b);
+    if (days.length > 0) {
+      return days;
+    }
+  }
+  return c.get<boolean>('budget.countWeekends', false) ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5];
+}
 
 export function readConfig(): Config {
   const c = vscode.workspace.getConfiguration(SECTION);
@@ -34,7 +52,7 @@ export function readConfig(): Config {
     thresholds,
     paceWarning: c.get<boolean>('warnings.paceWarning', true),
     warningsEnabled: c.get<boolean>('warnings.enabled', true),
-    countWeekends: c.get<boolean>('budget.countWeekends', false),
+    workDays: readWorkDays(c),
     reserve: Math.max(0, c.get<number>('budget.reserve', 0)),
     tipsEnabled: c.get<boolean>('tips.enabled', true),
     accent: c.get<string>('appearance.accentColor', 'auto'),

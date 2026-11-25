@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { Config, readConfig, SECTION } from './config';
+import { Config, readConfig, SECTION, WEEKDAY_IDS } from './config';
 import { DashboardCommand, DashboardModel, DashboardSettingKey } from './core/dashboardModel';
 import { computeForecast } from './core/forecast';
 import { computeMetrics } from './core/metrics';
@@ -29,7 +29,7 @@ const WALKTHROUGH = 'contingentWatcher.gettingStarted';
 /** Maps dashboard setting keys to our configuration keys. */
 const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   display: 'statusBar.display',
-  countWeekends: 'budget.countWeekends',
+  workDays: 'budget.workDays',
   reserve: 'budget.reserve',
   thresholds: 'warnings.thresholds',
   warningsEnabled: 'warnings.enabled',
@@ -91,7 +91,7 @@ class Controller implements vscode.Disposable {
   }
 
   private get forecastOpts() {
-    return { countWeekends: this.cfg.countWeekends, reserve: this.cfg.reserve };
+    return { workDays: this.cfg.workDays, reserve: this.cfg.reserve };
   }
 
   private forecast(snap: QuotaSnapshot): Forecast {
@@ -230,7 +230,7 @@ class Controller implements vscode.Disposable {
         : [],
       settings: {
         display: this.cfg.display,
-        countWeekends: this.cfg.countWeekends,
+        workDays: this.cfg.workDays,
         reserve: this.cfg.reserve,
         thresholds: this.cfg.thresholds,
         warningsEnabled: this.cfg.warningsEnabled,
@@ -439,6 +439,12 @@ class Controller implements vscode.Disposable {
       v = value === 'left' ? 'left' : 'right';
     } else if (key === 'apiUrl') {
       v = typeof value === 'string' ? value.trim() : '';
+    } else if (key === 'workDays') {
+      const days = Array.isArray(value) ? [...new Set(value.map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b) : [];
+      if (days.length === 0) {
+        return; // at least one work day
+      }
+      v = days.map((d) => WEEKDAY_IDS[d]);
     } else if (key === 'unit') {
       v = value === 'credits' || value === 'requests' ? value : 'auto';
     } else if (key === 'btwOpenIn') {

@@ -35,7 +35,7 @@ const COMMANDS: Record<DashboardCommand, true> = {
 
 const SETTINGS: Record<DashboardSettingKey, true> = {
   display: true,
-  countWeekends: true,
+  workDays: true,
   reserve: true,
   thresholds: true,
   warningsEnabled: true,

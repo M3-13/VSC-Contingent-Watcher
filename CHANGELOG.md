@@ -2,6 +2,9 @@
 
 ## 0.2.0
 
+- Arbeitstage frei wählbar (z. B. Teilzeit Mo/Di/Do): Budget, Tempo, Prognose und Streak rechnen nur mit diesen Tagen
+- Einheitliche Benennung: Credits oder Requests je nach Abrechnung, sonst neutral „Kontingent“
+
 - `@btw` im Copilot-Chat: Nebenfragen mit dem gewählten Chat-Modell und Chat-Kontext
 - AI-Credits werden bevorzugt angezeigt (einstellbar), Verbrauch pro Modell in Credits
 - Bedarf (geschätzt): was der Monat bei deinem Tempo gebraucht hätte

@@ -14,7 +14,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 - **Credits statt Requests:** Meldet GitHub AI-Credits (nutzungsbasierte Abrechnung), zeigt die Extension Credits an. Das ist einstellbar über `contingentWatcher.unit`.
 - **Bedarf (geschätzt):** wie viel dein Monat bei deinem Tempo gebraucht hätte, auch wenn das Kontingent schon leer ist, und wie viel pro Tag gereicht hätte.
 - **Hinweis gegen Verfall:** In der letzten Monatswoche meldet die Extension, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.
-- Berechnet ein **Tagesbudget** bis zum Reset (optional ohne Wochenenden, mit Reserve).
+- Berechnet ein **Tagesbudget** bis zum Reset, verteilt auf **deine Arbeitstage** (z. B. nur Mo, Di, Do bei Teilzeit) und optional mit Reserve.
 - Prognostiziert dein Tempo und zeigt, an welchem Tag das Kontingent bei gleichem Verbrauch leer wäre.
 - Warnt bei Schwellenwerten (z. B. 50/75/90/100 %) und bei zu hohem Tempo.
 - Gibt Spartipps und bringt eine Walkthrough für den Einstieg mit.
@@ -38,7 +38,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `contingentWatcher.warnings.enabled` | `true` | Benachrichtigungen ein/aus. |
 | `contingentWatcher.warnings.thresholds` | `[50, 75, 90, 100]` | Prozentwerte, bei denen gewarnt wird. |
 | `contingentWatcher.warnings.paceWarning` | `true` | Warnung, wenn das Kontingent vor dem Reset leer wäre. |
-| `contingentWatcher.budget.countWeekends` | `false` | Wochenenden als Budgettage zählen. |
+| `contingentWatcher.budget.workDays` | `mon…fri` | Deine Arbeitstage, z. B. `["mon","tue","thu"]`. Das Kontingent wird nur auf diese Tage verteilt. |
 | `contingentWatcher.budget.reserve` | `0` | Reserve, die nicht ins Tagesbudget eingeht. |
 | `contingentWatcher.tips.enabled` | `true` | Spartipp im Tooltip anzeigen. |
 | `contingentWatcher.appearance.accentColor` | `auto` | Akzentfarbe des Tachometers (`teal`, `violet`, `blue`, `green`, `orange`, `pink` oder `#hex`). |
