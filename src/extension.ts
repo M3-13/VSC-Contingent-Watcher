@@ -323,8 +323,8 @@ class Controller implements vscode.Disposable {
     return model;
   }
 
-  private monthLabel(d: Date): string {
-    return d.toLocaleDateString(vscode.env.language, { month: 'long', year: 'numeric' });
+  private monthLabel(d: Date, timeZone?: string): string {
+    return d.toLocaleDateString(vscode.env.language, { month: 'long', year: 'numeric', timeZone });
   }
 
   private modelsSection(snap: QuotaSnapshot | undefined): DashboardModel['models'] {
@@ -359,7 +359,9 @@ class Controller implements vscode.Disposable {
     // A cycle is labelled by the month it covered (the month before its reset).
     const label = (resetDate: string) => {
       const r = new Date(resetDate);
-      return this.monthLabel(new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() - 1, Math.max(1, r.getUTCDate()))));
+      // The date is built in UTC, so format it in UTC too (in local time west
+      // of UTC, 1 Nov 00:00Z would still be October).
+      return this.monthLabel(new Date(Date.UTC(r.getUTCFullYear(), r.getUTCMonth() - 1, Math.max(1, r.getUTCDate()))), 'UTC');
     };
     const cycles: DashboardModel['review']['cycles'] = [];
     if (current) {

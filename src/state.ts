@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { localDate } from './core/activity';
 import { addCycle, CycleSummary, summarizeCycle } from './core/cycles';
 import { compact } from './core/history';
 import { cycleKey } from './core/thresholds';
@@ -91,11 +92,13 @@ export class State {
     await this.mem.update(K_SNOOZE, Date.now() + hours * 3_600_000);
   }
 
+  // "Today" is the user's local day (not the UTC date), so the pace warning
+  // appears at most once per local day in every time zone.
   paceWarnedToday(): boolean {
-    return this.mem.get<string>(K_PACE_DAY) === new Date().toISOString().slice(0, 10);
+    return this.mem.get<string>(K_PACE_DAY) === localDate(Date.now());
   }
 
   async markPaceWarned(): Promise<void> {
-    await this.mem.update(K_PACE_DAY, new Date().toISOString().slice(0, 10));
+    await this.mem.update(K_PACE_DAY, localDate(Date.now()));
   }
 }

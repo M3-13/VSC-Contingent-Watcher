@@ -44,3 +44,18 @@ test('pickTip accepts a status or situations', () => {
   assert.ok(pickTip(['surplus', 'onTrack'], 2).id);
   assert.ok(pickTip('ahead', -7.5).id);
 });
+
+test('tips are unit-neutral: requests accounts never read about "credits"', async () => {
+  // Tips are shown for both billing units, so none may name one ("spare credits").
+  for (const t of TIPS) {
+    assert.doesNotMatch(t.text, /\bcredits?\b/i, t.id);
+  }
+  const fs = await import('fs');
+  const path = await import('path');
+  const de = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'l10n', 'bundle.l10n.de.json'), 'utf8'));
+  const tip = TIPS.find((t) => t.id === 'surplusInstructions')!;
+  assert.match(tip.text, /spare allowance/);
+  // German translation exists for the new wording and is neutral too.
+  assert.ok(de[tip.text], 'German translation for surplusInstructions');
+  assert.doesNotMatch(de[tip.text], /Credits/);
+});

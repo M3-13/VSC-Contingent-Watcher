@@ -180,7 +180,7 @@ test('webview: German credits account renders German labels and the credits unit
 
 test(
   'webview: chart in Los Angeles shows the last cycle day (Mon 30 Nov, until 16:00 PST)',
-  { skip, todo: 'BUG: dashboard.js drawChart uses startOfDay(local reset) as exclusive end, dropping Nov 30 for time zones west of UTC' },
+  { skip },
   async (t) => {
     const model = await makeModel(t, 'America/Los_Angeles', 'en', BODIES.requests(120));
     const v = await render(model, 'America/Los_Angeles');
@@ -192,7 +192,7 @@ test(
 
 test(
   'webview: allowance used up today → remaining days are shown as empty',
-  { skip, todo: 'BUG: drawChart marks future days empty only if a past bucket is `exhausted`; on the day it runs out none is, so future days show "Daily budget: 0"' },
+  { skip },
   async (t) => {
     const model = await makeModel(t, 'UTC', 'en', BODIES.requests(0), ['mon', 'tue', 'thu'], 25);
     assert.equal(model.forecast.status, 'exhausted');

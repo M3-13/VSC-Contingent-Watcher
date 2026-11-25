@@ -495,6 +495,10 @@ function workDayHistory(now: number, wd: number[], perDay: number) {
 }
 
 test('dashboard model: correct values for work days Mon/Tue/Thu', async (t) => {
+  // Values below are hand-computed for UTC days (work days are local days).
+  const prevTz = process.env.TZ;
+  process.env.TZ = 'UTC';
+  t.after(() => (prevTz === undefined ? delete process.env.TZ : (process.env.TZ = prevTz)));
   const wd = [1, 2, 4];
   // Work days so far (to Thu 26 12:00): 2,3,5,9,10,12,16,17,19,23,24,26 → 12 × 15 = 180 used.
   const history = workDayHistory(NOW, wd, 15);
@@ -517,9 +521,12 @@ test('dashboard model: correct values for work days Mon/Tue/Thu', async (t) => {
   close(m.forecast.cycleElapsed, 11.5 / 13, 'cycleElapsed');
   close(m.metrics.planPerDay, 300 / 13, 'planPerDay');
   close(m.metrics.buffer, 300 * (11.5 / 13) - 180, 'buffer');
-  // Recent burn: points from 19 Nov 12:00 to 26 Nov 12:00 → 3 budget days (Thu ½, Mon, Tue, Thu ½), 45 used.
+  // Recent burn (day-granular since the QA pace fix): the last 7 local days Fri 20 … Thu 26 with
+  // today counted fully → 3 budget days (Mon, Tue, Thu), 45 used. Formerly: points 19 Nov 12:00 →
+  // 26 Nov 12:00 = Thu ½, Mon, Tue, Thu ½.
   close(m.forecast.burnRate, 45 / 3, 'burnRate');
-  close(m.forecast.projectedUsed, 180 + 15 * 1.5, 'projectedUsed');
+  // Today's 15 are already in `used`; only the budget days after today (Mon 30) are projected.
+  close(m.forecast.projectedUsed, 180 + 15 * 1, 'projectedUsed');
   assert.equal(m.forecast.status, 'onTrack');
   assert.equal(m.forecast.exhaustionDate, undefined);
   // Daily buckets: sum = used, off days by local weekday.
@@ -550,7 +557,8 @@ test('dashboard model: German locale and credits fixtures render translated', as
   assert.equal(m.quota.unitLabel, 'Credits');
   assert.equal(m.strings.tabOverview, 'Übersicht');
   assert.equal(m.forecast.statusLabel, 'Im Plan');
-  assert.match(b.item().tooltip.value, /Verbleibend: \*\*1,300\*\* \/ 3,900 Credits/);
+  // German number format, like the dashboard (was "1,300 / 3,900", which encoded the fmt() locale bug).
+  assert.match(b.item().tooltip.value, /Verbleibend: \*\*1\.300\*\* \/ 3\.900 Credits/);
   fs.mkdirSync(path.join(ROOT, 'out', 'test', 'qa-fixtures'), { recursive: true });
   fs.writeFileSync(path.join(ROOT, 'out', 'test', 'qa-fixtures', 'model-de-credits.json'), JSON.stringify(m));
   const b2 = await boot(t, { handler: () => json(BODIES.credits(1300)) });
@@ -808,7 +816,6 @@ test('interval: refreshes once refreshIntervalMinutes elapsed, also without wind
 
 test(
   'i18n: status bar numbers follow the VS Code display language like the dashboard does',
-  { todo: 'BUG: format.ts fmt() uses toLocaleString() without vscode.env.language → "1,300" in the German status bar/tooltip, "1.300" in the dashboard' },
   async (t) => {
     const b = await boot(t, { locale: 'de', handler: () => json(BODIES.credits(1300)) });
     assert.equal(b.item().text, '$(contingent-level-2) 1.300');
@@ -817,7 +824,6 @@ test(
 
 test(
   'TZ: month review labels the November cycle "November 2026" also west of UTC',
-  { todo: 'BUG: extension.ts reviewSection label() formats 1 Nov 00:00Z in local time → "October 2026" in America/*' },
   async (t) => {
     const prev = process.env.TZ;
     process.env.TZ = 'America/Los_Angeles';

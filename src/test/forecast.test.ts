@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 import { addBudgetDays, budgetDays, computeForecast, cycleStart } from '../core/forecast';
 import { QuotaSnapshot } from '../core/types';
 
+// Expectations are hand-computed for UTC days; work days are local days, so
+// pin the time zone for this file (each test file runs in its own process).
+process.env.TZ = 'UTC';
+
 const ALL_DAYS: number[] = [];
 const WEEKDAYS = [1, 2, 3, 4, 5];
 
@@ -56,7 +60,9 @@ test('budgetDays counts partial days', () => {
 test('addBudgetDays skips weekends', () => {
   assert.equal(addBudgetDays(utc(11, 6, 12), 1, WEEKDAYS).getTime(), utc(11, 9, 12));
   assert.equal(addBudgetDays(utc(11, 6, 12), 1, ALL_DAYS).getTime(), utc(11, 7, 12));
-  assert.equal(addBudgetDays(utc(11, 7, 10), 1, WEEKDAYS).getTime(), utc(11, 10, 0)); // from Saturday
+  // From Saturday: all of Monday. Ending exactly at midnight stays on Monday (last ms), so
+  // the displayed date is the work day (was utc(11, 10, 0) = Tuesday before the QA fix).
+  assert.equal(addBudgetDays(utc(11, 7, 10), 1, WEEKDAYS).getTime(), utc(11, 10, 0) - 1);
   assert.equal(addBudgetDays(utc(11, 16), 7.5, ALL_DAYS).getTime(), utc(11, 23, 12));
 });
 
@@ -66,20 +72,24 @@ test('forecast: on track', () => {
   close(f.cycleElapsed, 0.5);
   close(f.daysLeft, 15);
   close(f.usedPercent, (140 / 300) * 100);
-  close(f.paceRatio, 140 / 150);
-  close(f.burnRate, 140 / 15);
-  close(f.projectedUsed, 280);
+  // Day-granular pace (QA fix): today (Mon 16) counts as a full day → 16 days expected,
+  // average 140/16, projected over the 14 days after today (was 140/150, 140/15, 280).
+  close(f.paceRatio, 140 / 160);
+  close(f.burnRate, 140 / 16);
+  close(f.projectedUsed, 140 + (140 / 16) * 14);
   close(f.dailyBudget, 160 / 15);
   assert.equal(f.exhaustionDate, undefined);
 });
 
 test('forecast: ahead of pace without early exhaustion', () => {
-  // Recent burn is low, so no exhaustion is projected, but pace ratio is 1.2.
+  // Recent burn is low, so no exhaustion is projected, but pace ratio is 1.2
+  // (192 vs 160 expected through the end of today; was 180 vs 150 before the
+  // day-granular pace fix).
   const hist = [
-    { t: utc(11, 9), used: 178 },
-    { t: utc(11, 16), used: 180 },
+    { t: utc(11, 9), used: 190 },
+    { t: utc(11, 16), used: 192 },
   ];
-  const f = computeForecast(snap(180), hist, OPTS, NOW);
+  const f = computeForecast(snap(192), hist, OPTS, NOW);
   assert.equal(f.status, 'ahead');
   close(f.paceRatio, 1.2);
   assert.equal(f.exhaustionDate, undefined);
@@ -89,7 +99,9 @@ test('forecast: critical with exhaustion before reset', () => {
   const f = computeForecast(snap(200), [], OPTS, NOW);
   assert.equal(f.status, 'critical');
   assert.ok(f.exhaustionDate);
-  assert.equal(f.exhaustionDate.getTime(), utc(11, 23, 12)); // 100 left at 13.33/day = 7.5 days
+  // 100 left at 200/16 = 12.5/day (today counts fully) = 8 days → end of Mon 23 (last ms).
+  // Was utc(11, 23, 12): 13.33/day = 7.5 days with the 24 h pace.
+  assert.equal(f.exhaustionDate.getTime(), utc(11, 24) - 1);
   assert.ok(f.exhaustionDate.getTime() < DEC1 - 3 * DAY);
 });
 
@@ -116,18 +128,23 @@ test('forecast: reserve reduces daily budget', () => {
 });
 
 test('forecast: recent burn rate from history overrides average', () => {
+  // The window is the last 7 local days incl. today (Nov 10 … 16, today counted fully);
+  // the first point now sits at its start (was Nov 9 with the 7 × 24 h window).
   const hist = [
-    { t: utc(11, 9), used: 130 },
+    { t: utc(11, 10), used: 130 },
     { t: utc(11, 16), used: 200 },
   ];
   const f = computeForecast(snap(200), hist, OPTS, NOW);
-  close(f.burnRate, 10); // 70 over 7 days, average would be 13.33
-  close(f.projectedUsed, 200 + 10 * 15);
+  close(f.burnRate, 10); // 70 over 7 days, average would be 12.5
+  close(f.projectedUsed, 200 + 10 * 14); // budget days after today
 });
 
 test('forecast: single history point falls back to average', () => {
-  const f = computeForecast(snap(150), [{ t: utc(11, 10), used: 100 }], OPTS, NOW);
-  close(f.burnRate, 10);
+  // A point inside the window gives no usage at its start (Nov 10 00:00) → cycle average
+  // over 16 days incl. today. (A point at/before the window start is enough since the QA fix:
+  // usage is then measured up to the current snapshot.)
+  const f = computeForecast(snap(150), [{ t: utc(11, 12), used: 100 }], OPTS, NOW);
+  close(f.burnRate, 150 / 16);
 });
 
 test('forecast: weekdays only changes days left', () => {

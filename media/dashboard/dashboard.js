@@ -424,7 +424,7 @@
       return '';
     }
     const anyEst = m.daily.some((d) => d.estimated);
-    const anyEmpty = m.daily.some((d) => d.exhausted);
+    const anyEmpty = m.daily.some((d) => d.exhausted) || (!model.quota.unlimited && model.quota.entitlement > 0 && model.quota.remaining <= 0);
     const anyOff = m.daily.some((d) => d.offDay);
     const showPlan = !model.quota.unlimited && m.planPerDay > 0;
     const showBudget = !model.quota.unlimited && model.forecast && model.forecast.dailyBudget > 0;
@@ -456,9 +456,14 @@
     const days = m.daily.map((d) => ({ ...d, day: parseDay(d.date), future: false }));
     // Future calendar days until the reset, shown as ghosts at today's daily budget.
     const last = days[days.length - 1].day;
-    const resetDay = startOfDay(new Date(q.resetDate));
-    // Once the allowance is empty, the rest of the cycle stays empty too.
-    const emptyNow = !q.unlimited && q.remaining <= 0 && m.daily.some((d) => d.exhausted);
+    // Exclusive end: the reset's calendar date (UTC, the cycle is a UTC month)
+    // as a local day. startOfDay(local reset) would drop the last cycle day
+    // west of UTC, where 1 Dec 00:00Z is still 30 Nov.
+    const r = new Date(q.resetDate);
+    const resetDay = new Date(r.getUTCFullYear(), r.getUTCMonth(), r.getUTCDate());
+    // Once the allowance is empty, the rest of the cycle stays empty too
+    // (also on the day it ran out, when no past bucket is `exhausted` yet).
+    const emptyNow = !q.unlimited && q.entitlement > 0 && q.remaining <= 0;
     for (let d = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1); d < resetDay && days.length < 42; d.setDate(d.getDate() + 1)) {
       days.push({ date: '', used: 0, offDay: !workDays.includes(d.getDay()), estimated: false, exhausted: emptyNow, day: new Date(d), future: true });
     }

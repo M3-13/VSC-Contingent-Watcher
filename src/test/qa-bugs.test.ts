@@ -1,7 +1,6 @@
 /**
- * QA: demonstrations of bugs found during testing. Each test asserts the
- * expected behaviour and is marked `todo`, so `npm test` stays green while the
- * bug exists (node:test reports todo failures without failing the run).
+ * QA: regression tests for bugs found during testing (formerly marked `todo`
+ * while the bugs existed). Each test asserts the expected behaviour.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -45,7 +44,6 @@ const MTT = [1, 2, 4]; // Mon, Tue, Thu
 
 test(
   'TZ: "empty on" date can fall on a local day off (Los Angeles, Mon/Tue/Thu)',
-  { todo: 'BUG: work days are matched on UTC weekdays (forecast.ts isWorkDay/addBudgetDays), but the date is shown in local time' },
   () => {
     withTz('America/Los_Angeles', () => {
       // Tue 24 Nov 12:00 PST. 6 more budget hours until empty.
@@ -59,7 +57,6 @@ test(
 
 test(
   'TZ: a local work day evening counts nothing for today (Los Angeles, Thu 17:00)',
-  { todo: 'BUG: budgetDays() uses UTC days; after 16:00 PST a Thursday is already Friday (day off) in UTC' },
   () => {
     withTz('America/Los_Angeles', () => {
       const now = Date.UTC(2026, 10, 27, 1); // Thu 26 Nov 17:00 PST
@@ -68,15 +65,17 @@ test(
       const f = computeForecast(snap(200, now), [], opts, now);
       // Chart says today is a work day …
       assert.equal(m.daily[m.daily.length - 1].offDay, false);
-      // … so the rest of today (7 h) plus Mon 30 should be left. Actual: exactly 1 (only Mon 30 UTC).
-      assert.ok(f.daysLeft > 1, `daysLeft ${f.daysLeft}`);
+      // … so the rest of today (7 h) plus Mon 30 until 16:00 PST (reset, as in the Sun 18:00 test
+      // below) should be left = 23/24. Before the fix: exactly 1 (only Mon 30 UTC).
+      // (Originally asserted `daysLeft > 1`, which counted Mon 30 as a full day and contradicted
+      // the reset being an absolute instant, 1 Dec 00:00Z = Mon 30 16:00 PST.)
+      assert.ok(Math.abs(f.daysLeft - (7 + 16) / 24) < 1e-6, `daysLeft ${f.daysLeft}`);
     });
   },
 );
 
 test(
   'TZ: a local day off counts as budget time (Los Angeles, Sun 18:00)',
-  { todo: 'BUG: Sunday 16:00–24:00 PST is Monday in UTC and is counted as work time' },
   () => {
     withTz('America/Los_Angeles', () => {
       const now = Date.UTC(2026, 10, 23, 2); // Sun 22 Nov 18:00 PST
@@ -93,7 +92,6 @@ test(
 
 test(
   'exhaustion exactly at the end of a work day is reported as the next (day off) date',
-  { todo: 'BUG: addBudgetDays returns 00:00 of the following day when the budget ends exactly at midnight (forecast.ts addBudgetDays, `left <= avail`)' },
   () => {
     withTz('UTC', () => {
       // Mon 23 Nov 12:00Z, work days Mon/Wed, half a budget day left → empty at the end of Monday.
@@ -141,7 +139,6 @@ function onPlanUser(nowIso: string) {
 
 test(
   'pace: a user exactly on plan is not flagged "will run out" in the first week',
-  { todo: 'BUG: burn rate divides usage by 24 h budget days measured from the first history point (forecast.ts recentBurnRate), overestimating early in the cycle' },
   () => {
     for (const nowIso of ['2026-11-03T17:00:00Z', '2026-11-04T17:00:00Z', '2026-11-06T17:00:00Z']) {
       const u = onPlanUser(nowIso);
@@ -154,7 +151,6 @@ test(
 
 test(
   'pace: a user exactly on plan sees no "empty on …" date mid-month',
-  { todo: 'BUG: projectedUsed adds burnRate × the rest of today although today’s work is done, so it exceeds the allowance and an exhaustion date (30 Nov) is shown' },
   () => {
     const u = onPlanUser('2026-11-18T17:00:00Z');
     const f = computeForecast(u.s, u.history, u.opts, u.now);
@@ -164,7 +160,6 @@ test(
 
 test(
   'pace: on plan on day one is not "Faster than planned"',
-  { todo: 'BUG: paceRatio compares office-hour usage with a 24 h linear plan; on the first work day afternoon it is ~1.4 → status "ahead" with warning background' },
   () => {
     const u = onPlanUser('2026-11-02T17:00:00Z');
     const f = computeForecast(u.s, u.history, u.opts, u.now);
@@ -176,7 +171,6 @@ void D;
 
 test(
   'TZ: pace warning is shown at most once per local day (Los Angeles)',
-  { todo: 'BUG: State.paceWarnedToday/markPaceWarned use the UTC date (state.ts), so in LA a second warning appears after 16:00 the same day' },
   async (t) => {
     const { State } = await import('../state');
     const mem = new Map<string, unknown>();

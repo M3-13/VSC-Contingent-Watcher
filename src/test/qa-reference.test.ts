@@ -7,8 +7,16 @@
  * exhaustion date is found by walking hour segments.
  *
  * Every scenario runs in three time zones (process.env.TZ is switched at
- * runtime; Node re-reads it), because budget days use UTC days while the
- * daily buckets use local days.
+ * runtime; Node re-reads it), because budget days and daily buckets use
+ * local days while cycle start and reset are UTC instants.
+ *
+ * Updated with the QA fixes (qa-bugs.test.ts): work days are LOCAL days
+ * (formerly UTC days), and the pace is day-granular: today counts as a full
+ * budget day for expected usage, averages and the recent burn rate (last 7
+ * whole local days), the projection only covers the budget days after
+ * today, an exhaustion date needs a shortfall of at least half a budget day,
+ * and "ahead"/"critical" need one completed budget day. The old reference
+ * encoded the buggy definitions (24 h pace from the first history point).
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -38,16 +46,25 @@ function withTz<T>(tz: string, fn: () => T): T {
 
 // ------------------------------------------------------------------ reference
 
-function utcWork(t: number, wd: readonly number[]): boolean {
-  return wd.length === 0 || wd.includes(new Date(t).getUTCDay());
+function localWork(t: number, wd: readonly number[]): boolean {
+  return wd.length === 0 || wd.includes(new Date(t).getDay());
 }
 
-/** Work time in [from, to) in days, integrated over UTC hour segments. */
+/** Local midnight `offset` days after the local day of t. */
+function localMidnight(t: number, offset = 0): number {
+  const d = new Date(t);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + offset).getTime();
+}
+
+/**
+ * Work time in [from, to) in days, integrated over UTC hour segments (local
+ * day boundaries fall on whole UTC hours in the tested time zones).
+ */
 function refBudgetDays(from: number, to: number, wd: readonly number[]): number {
   let ms = 0;
   for (let t = from; t < to; ) {
     const end = Math.min(to, (Math.floor(t / H) + 1) * H);
-    if (utcWork(t, wd)) {
+    if (localWork(t, wd)) {
       ms += end - t;
     }
     t = end;
@@ -61,9 +78,11 @@ function refAddBudgetDays(t: number, days: number, wd: readonly number[]): numbe
   let cur = t;
   for (let i = 0; i < 24 * 400; i++) {
     const end = (Math.floor(cur / H) + 1) * H;
-    if (utcWork(cur, wd)) {
+    if (localWork(cur, wd)) {
       if (need <= end - cur) {
-        return cur + need;
+        const e = cur + need;
+        // Ending exactly at the end of a work day stays on that day.
+        return e === localMidnight(e) ? e - 1 : e;
       }
       need -= end - cur;
     }
@@ -139,37 +158,51 @@ function refForecast(i: RefIn) {
   const elapsed = refBudgetDays(start, Math.min(now, reset), wd);
   const daysLeft = refBudgetDays(Math.max(now, start), reset, wd);
   const cycleElapsed = Math.min(1, elapsed / total);
-  const expected = snap.entitlement * cycleElapsed;
+  // Day-granular pace: today counts as a full budget day.
+  const todayEnd = Math.min(reset, localMidnight(now, 1));
+  const paceElapsed = refBudgetDays(start, todayEnd, wd);
+  const completed = refBudgetDays(start, Math.min(reset, localMidnight(now)), wd);
+  const after = refBudgetDays(Math.max(todayEnd, start), reset, wd);
+  const expected = snap.entitlement * Math.min(1, paceElapsed / total);
   const paceRatio = expected > 0 ? snap.used / expected : snap.used > 0 ? Infinity : 0;
   const spendable = Math.max(0, snap.remaining - i.reserve);
   const dailyBudget = daysLeft > 0 ? spendable / Math.max(1, daysLeft) : 0;
-  // Recent burn: first/last history point within the last 7 days (and this cycle).
-  const ws = Math.max(start, now - 7 * D);
-  const win = i.history.filter((p) => p.t >= ws && p.t <= now).sort((a, b) => a.t - b.t);
-  let burn: number | undefined;
-  if (win.length >= 2) {
-    const days = refBudgetDays(win[0].t, win[win.length - 1].t, wd);
-    if (days >= 0.5) {
-      burn = Math.max(0, win[win.length - 1].used - win[0].used) / days;
+  // Recent burn: usage since local midnight 6 days before today (or cycle
+  // start, where usage is 0), per budget day of those whole local days.
+  const ws = Math.max(start, localMidnight(now, -6));
+  let base: number | undefined;
+  if (ws <= start) {
+    base = 0;
+  } else {
+    const before = i.history.filter((p) => p.t <= ws && p.t <= now).sort((a, b) => b.t - a.t)[0];
+    const afterPt = i.history.filter((p) => p.t > ws && p.t <= now).sort((a, b) => a.t - b.t)[0];
+    if (before) {
+      base = afterPt ? before.used + ((afterPt.used - before.used) * (ws - before.t)) / (afterPt.t - before.t) : before.used;
     }
   }
-  burn ??= elapsed >= 1 ? snap.used / elapsed : 0;
-  const projectedUsed = snap.used + burn * daysLeft;
+  let burn: number | undefined;
+  const winDays = refBudgetDays(ws, todayEnd, wd);
+  if (base !== undefined && winDays >= 0.5) {
+    burn = Math.max(0, snap.used - base) / winDays;
+  }
+  burn ??= paceElapsed >= 1 - 1e-9 ? snap.used / paceElapsed : 0;
+  const projectedUsed = snap.used + burn * after;
   const exhaustion =
-    burn > 0 && projectedUsed > snap.entitlement && snap.remaining > 0 ? refAddBudgetDays(now, snap.remaining / burn, wd) : undefined;
+    burn > 0 && snap.remaining > 0 && snap.remaining / burn < after - 0.5 ? refAddBudgetDays(now, snap.remaining / burn, wd) : undefined;
+  const enough = completed >= 1 - 1e-9;
   let status: string;
   if (snap.unlimited) {
     status = 'unlimited';
   } else if (snap.remaining <= 0) {
     status = 'exhausted';
-  } else if (exhaustion !== undefined && exhaustion < reset - 3 * D) {
+  } else if (enough && exhaustion !== undefined && exhaustion < reset - 3 * D) {
     status = 'critical';
-  } else if (paceRatio > 1.15 && snap.used >= 5) {
+  } else if (enough && paceRatio > 1.15 && snap.used >= 5) {
     status = 'ahead';
   } else {
     status = 'onTrack';
   }
-  return { total, elapsed, daysLeft, cycleElapsed, paceRatio, dailyBudget, burnRate: burn, projectedUsed, exhaustion, status };
+  return { total, elapsed, paceElapsed, daysLeft, cycleElapsed, paceRatio, dailyBudget, burnRate: burn, projectedUsed, exhaustion, status };
 }
 
 function pad(n: number): string {
@@ -186,7 +219,7 @@ function refMetrics(i: RefIn) {
   const todayStart = new Date(new Date(now).getFullYear(), new Date(now).getMonth(), new Date(now).getDate()).getTime();
   const today = Math.max(0, snap.used - c.at(Math.max(c.start, todayStart)));
   const last7Days = Math.max(0, snap.used - c.at(Math.max(c.start, now - 7 * D)));
-  const cycleAverage = snap.used / Math.max(1, f.elapsed);
+  const cycleAverage = snap.used / Math.max(1, f.paceElapsed);
   const buffer = snap.entitlement * Math.min(1, f.elapsed / f.total) - snap.used;
   const bufferDays = planPerDay > 0 ? buffer / planPerDay : 0;
   const daily: { date: string; used: number; offDay: boolean; estimated: boolean; exhausted: boolean }[] = [];
@@ -226,13 +259,13 @@ function refMetrics(i: RefIn) {
     let rate: number | undefined;
     let exhaustedOn: number | undefined;
     if (snap.overageCount > 0) {
-      rate = f.elapsed >= 1 ? (snap.used + snap.overageCount) / f.elapsed : undefined;
+      rate = f.paceElapsed >= 1 - 1e-9 ? (snap.used + snap.overageCount) / f.paceElapsed : undefined;
     } else if (snap.remaining <= 0) {
       exhaustedOn = c.reach(snap.entitlement - 1e-6);
       const days = exhaustedOn !== undefined ? refBudgetDays(c.start, exhaustedOn, wd) : 0;
       rate = days >= 0.5 ? snap.entitlement / days : undefined;
     } else {
-      rate = f.elapsed >= 1 ? snap.used / f.elapsed : undefined;
+      rate = f.paceElapsed >= 1 - 1e-9 ? snap.used / f.paceElapsed : undefined;
     }
     if (rate !== undefined) {
       const estimate = Math.max(snap.used, rate * f.total);
@@ -411,8 +444,10 @@ function checkScenario(s: Scenario, tz: string): void {
   if (fc.exhaustionDate) {
     const e = fc.exhaustionDate.getTime();
     assert.ok(e > now && e <= Date.parse(snap.resetDate), `${label} exhaustion within cycle`);
-    // Lands inside a (UTC) work day: the instant just before it is work time.
-    assert.ok(utcWork(e - 1, wd), `${label} exhaustion on a work day`);
+    // Lands inside a (local) work day: the instant just before it is work time.
+    assert.ok(localWork(e - 1, wd), `${label} exhaustion on a work day`);
+    // … and its displayed local date is a work day.
+    assert.ok(localWork(e, wd), `${label} exhaustion date is a work day`);
   }
   if (fc.daysLeft >= 1) {
     close(fc.dailyBudget * fc.daysLeft, Math.max(0, snap.remaining - reserve), `${label} budget*daysLeft = spendable`);
@@ -512,18 +547,21 @@ for (const tz of TZS) {
 // ------------------------------------------------------------- hand-computed
 
 test('hand-computed: Nov 2026 has 21 Mon–Fri, 13 Mon/Tue/Thu, 4 Sat, 30 calendar budget days', () => {
-  const now = Date.UTC(2026, 10, 1);
-  for (const [wd, n] of [
-    [[1, 2, 3, 4, 5], 21],
-    [[1, 2, 4], 13],
-    [[6], 4],
-    [[0, 1, 2, 3, 4, 5, 6], 30],
-    [[], 30],
-  ] as [number[], number][]) {
-    const f = computeForecast(mkSnap(NOV_RESET, 300, 0, now), [], { workDays: wd, reserve: 0 }, now);
-    close(f.daysLeft, n, `daysLeft ${wd}`);
-    close(f.dailyBudget, 300 / n, `dailyBudget ${wd}`);
-  }
+  // Hand-computed for UTC days (work days are local days since the QA fix).
+  withTz('UTC', () => {
+    const now = Date.UTC(2026, 10, 1);
+    for (const [wd, n] of [
+      [[1, 2, 3, 4, 5], 21],
+      [[1, 2, 4], 13],
+      [[6], 4],
+      [[0, 1, 2, 3, 4, 5, 6], 30],
+      [[], 30],
+    ] as [number[], number][]) {
+      const f = computeForecast(mkSnap(NOV_RESET, 300, 0, now), [], { workDays: wd, reserve: 0 }, now);
+      close(f.daysLeft, n, `daysLeft ${wd}`);
+      close(f.dailyBudget, 300 / n, `dailyBudget ${wd}`);
+    }
+  });
 });
 
 test('hand-computed: Feb 2027 (28 days) has 20 Mon–Fri, 12 Mon/Tue/Thu, 4 Sat, 28 days', () => {
@@ -540,26 +578,32 @@ test('hand-computed: Feb 2027 (28 days) has 20 Mon–Fri, 12 Mon/Tue/Thu, 4 Sat,
 });
 
 test('hand-computed: Wed 25 Nov 12:00Z, Mon/Tue/Thu, 150/300 used, reserve 50', () => {
-  const now = Date.UTC(2026, 10, 25, 12);
-  const f = computeForecast(mkSnap(NOV_RESET, 300, 150, now), [], { workDays: [1, 2, 4], reserve: 50 }, now);
-  // Elapsed work days: 2,3,5,9,10,12,16,17,19,23,24 = 11 of 13; left: Thu 26, Mon 30.
-  close(f.cycleElapsed, 11 / 13, 'cycleElapsed');
-  close(f.daysLeft, 2, 'daysLeft');
-  close(f.dailyBudget, (150 - 50) / 2, 'dailyBudget');
-  close(f.burnRate, 150 / 11, 'burnRate (cycle average)');
-  close(f.projectedUsed, 150 + (150 / 11) * 2, 'projectedUsed');
-  close(f.paceRatio, 150 / (300 * (11 / 13)), 'paceRatio');
-  assert.equal(f.status, 'onTrack');
-  assert.equal(f.exhaustionDate, undefined);
+  // Hand-computed for UTC days (work days are local days since the QA fix).
+  withTz('UTC', () => {
+    const now = Date.UTC(2026, 10, 25, 12);
+    const f = computeForecast(mkSnap(NOV_RESET, 300, 150, now), [], { workDays: [1, 2, 4], reserve: 50 }, now);
+    // Elapsed work days: 2,3,5,9,10,12,16,17,19,23,24 = 11 of 13; left: Thu 26, Mon 30.
+    close(f.cycleElapsed, 11 / 13, 'cycleElapsed');
+    close(f.daysLeft, 2, 'daysLeft');
+    close(f.dailyBudget, (150 - 50) / 2, 'dailyBudget');
+    close(f.burnRate, 150 / 11, 'burnRate (cycle average)');
+    close(f.projectedUsed, 150 + (150 / 11) * 2, 'projectedUsed');
+    close(f.paceRatio, 150 / (300 * (11 / 13)), 'paceRatio');
+    assert.equal(f.status, 'onTrack');
+    assert.equal(f.exhaustionDate, undefined);
+  });
 });
 
 test('hand-computed: Sat-only worker, Sat 28 Nov 10:00Z: today counts 14/24, nothing else left', () => {
-  const now = Date.UTC(2026, 10, 28, 10);
-  const f = computeForecast(mkSnap(NOV_RESET, 300, 200, now), [], { workDays: [6], reserve: 0 }, now);
-  close(f.daysLeft, 14 / 24, 'daysLeft');
-  // daysLeft < 1: the rest is spendable today.
-  close(f.dailyBudget, 100, 'dailyBudget');
-  close(f.cycleElapsed, (3 + 10 / 24) / 4, 'cycleElapsed');
+  // Hand-computed for UTC days (work days are local days since the QA fix).
+  withTz('UTC', () => {
+    const now = Date.UTC(2026, 10, 28, 10);
+    const f = computeForecast(mkSnap(NOV_RESET, 300, 200, now), [], { workDays: [6], reserve: 0 }, now);
+    close(f.daysLeft, 14 / 24, 'daysLeft');
+    // daysLeft < 1: the rest is spendable today.
+    close(f.dailyBudget, 100, 'dailyBudget');
+    close(f.cycleElapsed, (3 + 10 / 24) / 4, 'cycleElapsed');
+  });
 });
 
 test('hand-computed: last day 23:00Z, all days: 1/24 day left, budget = everything', () => {
