@@ -344,6 +344,21 @@ button { font: inherit; color: inherit; }
   margin: 0 auto;
 }
 .g-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.widget { position: relative; }
+.w-ring { width: 64%; max-width: 180px; margin: 0 auto; }
+.w-battery, .w-bars { width: 76%; max-width: 230px; margin: 4px auto 0; }
+.w-center { top: 0; justify-content: center; }
+.widget-text { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 10px; }
+.w-battery + .widget-text .gauge-spark,
+.w-bars + .widget-text .gauge-spark,
+.w-ring .gauge-spark { display: none; }
+.w-track { fill: var(--track); }
+.w-fill { fill: url(#g-grad); }
+.w-shell { fill: none; stroke: var(--track); stroke-width: 3; }
+.w-cap { fill: var(--track); }
+.w-ring .g-track, .w-ring .g-fill { stroke-width: 16; }
+.w-ring .gauge-value { font-size: 34px; }
+.w-ring .gauge-unit { max-width: 66%; font-size: 11px; line-height: 1.3; }
 .g-track {
   fill: none;
   stroke: var(--track);
@@ -484,17 +499,8 @@ button { font: inherit; color: inherit; }
   background: var(--status);
   transition: width 0.5s var(--ease);
 }
+.meter-time { height: 4px; }
 .meter-time .meter-fill { background: color-mix(in srgb, var(--fg) 45%, transparent); }
-.meter-mark {
-  position: absolute;
-  top: -3px;
-  width: 2px;
-  height: 12px;
-  margin-left: -1px;
-  border-radius: 1px;
-  background: var(--fg);
-  opacity: 0.7;
-}
 
 /* ------------------------------------------------------------ tiles */
 
@@ -1054,6 +1060,53 @@ code {
 .act-time { font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .act-used { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .act-off { margin-top: 10px; font-size: 12px; }
+.act-kind { display: grid; place-items: center; flex: none; color: var(--muted); }
+.act-kind .i { width: 12px; height: 12px; }
+.act-details {
+  list-style: none;
+  margin: 1px 0 1px 18px;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.act-details li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.act-details li::before { content: '·'; margin-right: 5px; opacity: 0.7; }
+.act-details li.more { opacity: 0.8; }
+.act-details li.more::before { content: ''; margin: 0; }
+.act .act-date { margin-left: 18px; }
+.ticket {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  max-width: 50%;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--card-border);
+  font-size: 10.5px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ticket span { overflow: hidden; text-overflow: ellipsis; }
+.ticket .i { width: 10px; height: 10px; flex: none; }
+a.ticket { color: var(--vscode-textLink-foreground); }
+a.ticket:hover { background: var(--hover); }
+.ticket-title { color: var(--vscode-textLink-foreground); text-decoration: none; }
+.ticket-title:hover { text-decoration: underline; }
+.now-main .act-date span { overflow: hidden; text-overflow: ellipsis; }
+.now { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
+.now-main { display: grid; gap: 3px; min-width: 0; }
+.now-title { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.now-name { min-width: 0; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.now-main .act-date { display: flex; align-items: center; gap: 4px; }
+.now-main .act-date .i { width: 11px; height: 11px; flex: none; }
+.now-foot { display: flex; margin-top: 10px; }
+.now-empty { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; }
 
 .rev-list,
 .mod-list { gap: 12px; }

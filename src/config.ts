@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { DEFAULT_TICKET_PATTERN } from './core/activity';
 import { IconStyle } from './core/appearance';
 
 export type DisplayMode = 'remaining' | 'used' | 'percent' | 'dailyBudget';
@@ -19,6 +20,10 @@ export interface Config {
   statusBarColor: string;
   surplusHint: boolean;
   activityTracking: boolean;
+  /** Regex source for ticket ids in commit messages and branch names. */
+  ticketPattern: string;
+  /** Ticket link template with an {id} placeholder (empty = no links). */
+  ticketUrl: string;
 }
 
 export const SECTION = 'contingentWatcher';
@@ -60,5 +65,7 @@ export function readConfig(): Config {
     statusBarColor: c.get<string>('statusBar.color', 'auto'),
     surplusHint: c.get<boolean>('warnings.surplusHint', true),
     activityTracking: c.get<boolean>('activity.enabled', true),
+    ticketPattern: c.get<string>('activity.ticketPattern', DEFAULT_TICKET_PATTERN),
+    ticketUrl: c.get<string>('activity.ticketUrl', '').trim(),
   };
 }

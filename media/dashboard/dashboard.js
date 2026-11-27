@@ -17,7 +17,6 @@
   let refreshedFlashUntil = 0;
   let introPending = true;
   let addingThreshold = false;
-  let addingModel = false;
   /** @type {ResizeObserver | undefined} */
   let chartObserver;
   let chartWidth = 0;
@@ -206,6 +205,8 @@
     trash: S('<path d="M2.75 4.25h10.5M6.25 4.25V2.75h3.5v1.5M4 4.25l.6 9h6.8l.6-9"/>'),
     check: S('<path d="M3.25 8.5 6.5 11.5l6.25-7"/>'),
     aside: S('<path d="M2.5 3.5h7.5v5H6l-2.5 2v-2h-1z"/><path d="M12 6.5h1.5v5.25h-1v1.75l-2.25-1.75H7.5V10.5"/>'),
+    tag: S('<path d="M2.25 2.25h5.5l6 6-5.5 5.5-6-6z"/><circle cx="5.25" cy="5.25" r="1" fill="currentColor"/>'),
+    commit: S('<circle cx="8" cy="8" r="2.5"/><path d="M1.5 8h4M10.5 8h4"/>'),
     pause: S('<circle cx="8" cy="8" r="6"/><path d="M6.5 5.75v4.5M9.5 5.75v4.5"/>'),
   };
 
@@ -262,6 +263,126 @@
       <g class="g-segs">${segs}</g>${marker}</svg>`;
   }
 
+  // ---------------------------------------------------------------- other widget styles
+  // Large versions of the status bar icon styles. Like the gauge: 4 segments,
+  // filled by the remaining share, with the plan marker ("should be left today").
+
+  const GRAD = (x1, x2) =>
+    `<defs><linearGradient id="g-grad" x1="${x1}" y1="0" x2="${x2}" y2="0" gradientUnits="userSpaceOnUse">
+      <stop class="g-stop0" offset="0"/><stop class="g-stop1" offset="1"/></linearGradient></defs>`;
+
+  /** Position (0..1 share) → coordinate along 4 cells laid out from x0 with width w and gap g. */
+  function cellPos(share, x0, w, g) {
+    const s4 = clamp(share, 0, 1) * 4;
+    const i = Math.min(3, Math.floor(s4));
+    return x0 + i * (w + g) + (s4 - i) * w;
+  }
+
+  function planTitle(planShare) {
+    return `<title>${esc(raw('planMarker', fmt(planShare * (model.quota.entitlement || 0))))}</title>`;
+  }
+
+  function batterySvg(share, planShare) {
+    const x0 = 20;
+    const w = 37.5;
+    const g = 6;
+    let cells = '';
+    for (let i = 0; i < 4; i++) {
+      const x = x0 + i * (w + g);
+      const f = clamp(share * 4 - i, 0, 1);
+      cells += `<rect class="w-track" x="${x}" y="20" width="${w}" height="52" rx="5"/>`;
+      if (f > 0) {
+        cells += `<rect class="w-fill" x="${x}" y="20" width="${(w * f).toFixed(2)}" height="52" rx="5"/>`;
+      }
+    }
+    let marker = '';
+    if (planShare !== undefined) {
+      const x = cellPos(planShare, x0, w, g).toFixed(2);
+      marker = `<g class="g-plan">${planTitle(planShare)}<line x1="${x}" y1="14" x2="${x}" y2="78"/><circle cx="${x}" cy="7" r="2.6"/></g>`;
+    }
+    return `<svg class="g-svg" viewBox="0 0 220 92" aria-hidden="true" focusable="false">${GRAD(20, 188)}
+      <rect class="w-shell" x="10" y="10" width="188" height="72" rx="13"/><rect class="w-cap" x="201" y="33" width="9" height="26" rx="3"/>
+      ${cells}${marker}</svg>`;
+  }
+
+  function barsSvg(share, planShare) {
+    const x0 = 14;
+    const w = 40;
+    const g = 11.33;
+    const base = 100;
+    const heights = [34, 52, 70, 88];
+    let bars = '';
+    for (let i = 0; i < 4; i++) {
+      const x = (x0 + i * (w + g)).toFixed(2);
+      const h = heights[i];
+      const f = clamp(share * 4 - i, 0, 1);
+      bars += `<rect class="w-track" x="${x}" y="${base - h}" width="${w}" height="${h}" rx="6"/>`;
+      if (f > 0) {
+        const fh = Math.max(4, h * f);
+        bars += `<rect class="w-fill" x="${x}" y="${(base - fh).toFixed(2)}" width="${w}" height="${fh.toFixed(2)}" rx="6"/>`;
+      }
+    }
+    let marker = '';
+    if (planShare !== undefined) {
+      const x = cellPos(planShare, x0, w, g).toFixed(2);
+      marker = `<g class="g-plan">${planTitle(planShare)}<line x1="${x}" y1="${base + 3}" x2="${x}" y2="${base + 11}"/></g>`;
+    }
+    return `<svg class="g-svg" viewBox="0 0 220 112" aria-hidden="true" focusable="false">${GRAD(14, 206)}${bars}${marker}</svg>`;
+  }
+
+  function ringSvg(share, planShare) {
+    const c = 100;
+    const r = 82;
+    const pt = (deg, rr = r) => {
+      const a = ((deg - 90) * Math.PI) / 180;
+      return [c + rr * Math.cos(a), c + rr * Math.sin(a)];
+    };
+    const gap = 4;
+    const seg = (i) => [i * 90 + gap / 2, (i + 1) * 90 - gap / 2];
+    const arcD = (a0, a1) => {
+      const [x0, y0] = pt(a0);
+      const [x1, y1] = pt(a1);
+      return `M${x0.toFixed(2)} ${y0.toFixed(2)}A${r} ${r} 0 0 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`;
+    };
+    let segs = '';
+    for (let i = 0; i < 4; i++) {
+      const d = arcD(...seg(i));
+      const f = clamp(share * 4 - i, 0, 1);
+      segs += `<path class="g-track" d="${d}"/>`;
+      if (f > 0) {
+        segs += `<path class="g-fill" data-seg="${i}" data-f="${f.toFixed(4)}" d="${d}" pathLength="1" stroke-dasharray="${f.toFixed(4)} 2"/>`;
+      }
+    }
+    let marker = '';
+    if (planShare !== undefined) {
+      const s4 = clamp(planShare, 0, 1) * 4;
+      const i = Math.min(3, Math.floor(s4));
+      const [a0, a1] = seg(i);
+      const a = a0 + (s4 - i) * (a1 - a0);
+      const [x0, y0] = pt(a, r - 13);
+      const [x1, y1] = pt(a, r + 13);
+      const [xd, yd] = pt(a, r + 17);
+      marker = `<g class="g-plan">${planTitle(planShare)}<line x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}"/>
+        <circle cx="${xd.toFixed(2)}" cy="${yd.toFixed(2)}" r="2.6"/></g>`;
+    }
+    return `<svg class="g-svg" viewBox="0 0 200 200" aria-hidden="true" focusable="false">${GRAD(18, 182)}<g class="g-segs">${segs}</g>${marker}</svg>`;
+  }
+
+  /** The overview widget in the style chosen for the status bar icon. */
+  function widget(share, planShare, center, ends) {
+    const style = (model.settings && model.settings.statusBarIcon) || 'gauge';
+    switch (style) {
+      case 'battery':
+        return `<div class="widget w-battery">${batterySvg(share, planShare)}</div><div class="widget-text">${center}</div>`;
+      case 'bars':
+        return `<div class="widget w-bars">${barsSvg(share, planShare)}</div><div class="widget-text">${center}</div>`;
+      case 'ring':
+        return `<div class="widget w-ring">${ringSvg(share, planShare)}<div class="gauge-center w-center">${center}</div></div>`;
+      default:
+        return `<div class="widget w-gauge">${gaugeSvg(share, planShare)}${ends || ''}<div class="gauge-center">${center}</div></div>`;
+    }
+  }
+
   // ---------------------------------------------------------------- sections
 
   function header() {
@@ -298,9 +419,12 @@
 
     if (q.unlimited) {
       return `<section class="card hero st-unlimited" aria-label="${t('title')}">
-        <div class="gauge" role="img" aria-label="${t('unlimited')}">${gaugeSvg(1)}
-          <div class="gauge-center"><span class="gauge-spark">${icon.spark}</span><span class="gauge-value">∞</span>
-          <span class="gauge-unit">${t('usedThisCycle', fmt(q.used), q.unitLabel)}</span></div></div>
+        <div class="gauge" role="img" aria-label="${t('unlimited')}">${widget(
+          1,
+          undefined,
+          `<span class="gauge-spark">${icon.spark}</span><span class="gauge-value">∞</span>
+          <span class="gauge-unit">${t('usedThisCycle', fmt(q.used), q.unitLabel)}</span>`,
+        )}</div>
         <div class="hero-meta">${chip}${reset}</div>
         <p class="hero-note">${t('unlimitedHint')}</p></section>`;
     }
@@ -309,23 +433,20 @@
     const share = ent > 0 ? q.remaining / ent : 0;
     const planShare = f.cycleElapsed !== undefined ? 1 - f.cycleElapsed : undefined;
     const elapsed = clamp((f.cycleElapsed || 0) * 100, 0, 100);
-    const used = clamp(q.usedPercent, 0, 100);
     const label = raw('gaugeLabel', fmt(q.remaining), fmt(ent), q.unitLabel, Math.round(q.usedPercent));
 
     return `<section class="card hero st-${esc(status)}" aria-label="${t('title')}">
-      <div class="gauge" role="img" aria-label="${esc(label)}">${gaugeSvg(share, planShare)}
-        <span class="g-end g-end-l" aria-hidden="true">0</span><span class="g-end g-end-r" aria-hidden="true">${fmt(ent)}</span>
-        <div class="gauge-center"><span class="gauge-spark">${icon.spark}</span>
-          <span class="gauge-value">${fmt(q.remaining)}</span>
-          <span class="gauge-unit">${t('leftOf', fmt(ent), q.unitLabel)}</span></div>
-      </div>
+      <div class="gauge" role="img" aria-label="${esc(label)}">${widget(
+        share,
+        planShare,
+        `<span class="gauge-spark">${icon.spark}</span><span class="gauge-value">${fmt(q.remaining)}</span>
+          <span class="gauge-unit">${t('leftOf', fmt(ent), q.unitLabel)}</span>`,
+        `<span class="g-end g-end-l" aria-hidden="true">0</span><span class="g-end g-end-r" aria-hidden="true">${fmt(ent)}</span>`,
+      )}</div>
       <div class="hero-meta">${chip}${reset}</div>
       <div class="compare">
         <div class="cmp-row"><span class="cmp-label">${t('monthElapsed')}</span><span class="cmp-val">${pct(elapsed)}</span>
           <div class="meter meter-time"><span class="meter-fill" data-w="${elapsed}"></span></div></div>
-        <div class="cmp-row"><span class="cmp-label">${t('allowanceUsed')}</span><span class="cmp-val">${pct(q.usedPercent)}</span>
-          <div class="meter meter-used ${used > elapsed + 2 ? 'over' : ''}"><span class="meter-fill" data-w="${used}"></span>
-          <span class="meter-mark" data-l="${elapsed}" title="${t('monthElapsed')}: ${pct(elapsed)}"></span></div></div>
       </div>
     </section>`;
   }
@@ -583,19 +704,22 @@
       <div class="tips-head"><h2 id="tips-now-title">${t('tipsNow')}</h2>${ctx}</div>${body}</section>`;
   }
 
-  /** Tips tab: what btw is and which model answers. */
+  /** Translated sentence with {0} rendered as code (e.g. "/btw"). */
+  function withCode(id, code) {
+    return t(id, '\u0000').replace('\u0000', `<code>${esc(code)}</code>`);
+  }
+
+  /** Tips tab: what /btw is. */
   function btwCard() {
-    const free = model.settings.btwModel === 'included';
     return `<section class="card btw-card" aria-labelledby="btw-title">
-      <div class="card-head"><h2 id="btw-title">${icon.aside}${t('btwTitle')}</h2>${free ? '<span class="badge badge-good">0×</span>' : ''}</div>
-      <p class="btw-text">${t('btwText')}</p>
-      <p class="btw-text muted">${t(free ? 'btwModelInfoFree' : 'btwModelInfoChat')}</p>
+      <div class="card-head"><h2 id="btw-title">${icon.aside}${t('btwTitle')}</h2></div>
+      <p class="btw-text">${withCode('btwText', '/btw')}</p>
       <button class="btn primary" data-cmd="btw" data-k="btw-ask">${icon.aside}${t('askBtw')}</button></section>`;
   }
 
   /** Slim pointer to btw on the overview. */
   function btwStrip() {
-    return `<nav class="strips" aria-label="${t('btwGroup')}"><button class="strip" data-cmd="btw" data-k="strip-btw"><span class="strip-icon">${icon.aside}</span>
+    return `<nav class="strips" aria-label="${t('askBtw')}"><button class="strip" data-cmd="btw" data-k="strip-btw"><span class="strip-icon">${icon.aside}</span>
       <span class="strip-text"><strong>${t('askBtw')}</strong><span>${t('btwStrip')}</span></span>${icon.chevron}</button></nav>`;
   }
 
@@ -638,32 +762,98 @@
     return (model.quota && model.quota.unitLabel) || '';
   }
 
+  /** Ticket id as a chip; a link when the extension resolved a ticket URL. */
+  function ticketChip(id, url) {
+    if (!id) {
+      return '';
+    }
+    return url && /^https?:\/\//i.test(url)
+      ? `<a class="ticket" href="${esc(url)}" title="${esc(url)}">${icon.tag}<span>${esc(id)}</span></a>`
+      : `<span class="ticket">${icon.tag}<span>${esc(id)}</span></span>`;
+  }
+
+  /** Item title plus ticket chip; when the title is the ticket id, the title itself becomes the link. */
+  function titleWithTicket(cls, title, ticket, url) {
+    const link = url && /^https?:\/\//i.test(url);
+    if (ticket && title === ticket) {
+      return link
+        ? `<a class="${cls} ticket-title" href="${esc(url)}" title="${esc(url)}">${esc(title)}</a>`
+        : `<span class="${cls}">${esc(title)}</span>`;
+    }
+    return `<span class="${cls}" title="${esc(title)}">${esc(title)}</span>${ticketChip(ticket, url)}`;
+  }
+
+  const KIND_ICON = { ticket: 'tag', commit: 'commit', manual: 'flag', legacy: 'branch' };
+
+  /** History: what is being worked on right now. */
+  function currentCard() {
+    const a = model.activity || { enabled: false, items: [] };
+    const c = a.current;
+    let body;
+    if (!a.enabled) {
+      body = `<div class="empty-inline"><p><strong>${t('activityOffTitle')}</strong></p><p class="muted">${t('activityOffText')}</p>
+        <button class="btn primary small" data-action="enableActivity" data-k="act-on">${t('turnOn')}</button></div>`;
+    } else if (!c) {
+      body = `<div class="now-empty"><p class="muted">${t('nothingInProgress')}</p>
+        <button class="btn secondary small" data-cmd="startTask" data-k="task-start">${icon.plus}${t('startTask')}</button></div>`;
+    } else {
+      const where = esc(c.branch || c.repo || '');
+      const action = c.manual
+        ? `<button class="btn primary small" data-cmd="finishTask" data-k="task-finish">${icon.check}${t('finishTask')}</button>`
+        : `<button class="link subtle" data-cmd="startTask" data-k="task-start">${icon.plus}${t('startTask')}</button>`;
+      body = `<div class="now">
+        <div class="now-main"><div class="now-title">${titleWithTicket('now-name', c.title, c.ticket, c.ticketUrl)}</div>
+          ${where ? `<div class="act-date" title="${esc([c.repo, c.branch].filter(Boolean).join(' · '))}">${icon.branch}<span>${where}</span></div>` : ''}</div>
+        <div class="act-nums"><span class="act-time">${esc(duration(c.activeMinutes))}</span><span class="act-used">${esc(fmt(c.used))} ${esc(unit())}</span></div></div>
+        <div class="now-foot">${action}</div>`;
+    }
+    const live = c && a.enabled ? `<span class="badge badge-live"><span class="live-dot"></span>${t('activeNow')}</span>` : '';
+    return `<section class="card now-card" aria-labelledby="now-title">
+      <div class="card-head"><h2 id="now-title">${icon.history}${t('nowWorking')}</h2>${live}</div>${body}</section>`;
+  }
+
+  /** History: finished work items, newest first. */
   function activityCard() {
     const a = model.activity || { enabled: false, items: [] };
     const items = a.items || [];
+    if (!a.enabled && items.length === 0) {
+      return '';
+    }
     const clear =
       items.length > 0 ? `<button class="link subtle" data-cmd="clearActivity" data-k="act-clear">${icon.trash}${t('clear')}</button>` : '';
     let body;
-    if (!a.enabled && items.length === 0) {
-      body = `<div class="empty-inline"><p><strong>${t('activityOffTitle')}</strong></p><p class="muted">${t('activityOffText')}</p>
-        <button class="btn primary small" data-action="enableActivity" data-k="act-on">${t('turnOn')}</button></div>`;
-    } else if (items.length === 0) {
-      body = `<div class="empty-inline"><p><strong>${t('activityEmpty')}</strong></p><p class="muted">${t('activityEmptyText')}</p></div>`;
+    if (items.length === 0) {
+      body = `<p class="muted small">${t('activityEmptyText')}</p>`;
     } else {
       const multiRepo = new Set(items.map((x) => x.repo)).size > 1;
       body = `<ul class="act-list">${items
-        .map(
-          (x) => `<li class="act ${x.active ? 'is-active' : ''}">
+        .map((x) => {
+          const details = (x.details || []).filter((d) => d && d !== x.title);
+          const shown = details.slice(0, 3);
+          const more = details.length - shown.length;
+          const meta = [
+            multiRepo ? esc(x.repo) : '',
+            esc(dateRange(x.start, x.end)),
+            x.commits > 0 ? (x.commits === 1 ? t('commitsOne') : t('commitsMany', fmt(x.commits))) : '',
+          ]
+            .filter(Boolean)
+            .join(' · ');
+          const kindIcon = icon[KIND_ICON[x.kind] || 'branch'];
+          return `<li class="act">
           <div class="act-main">
-            <div class="act-title"><span class="act-name" title="${esc(x.title)}">${esc(x.title)}</span>${
-              x.active ? `<span class="badge badge-live"><span class="live-dot"></span>${t('activeNow')}</span>` : ''
-            }</div>
-            ${x.detail ? `<div class="act-detail" title="${esc(x.detail)}">${esc(x.detail)}</div>` : ''}
-            <div class="act-date">${multiRepo ? `${esc(x.repo)} · ` : ''}${esc(dateRange(x.start, x.end))}</div>
+            <div class="act-title"><span class="act-kind" title="${t(`kind_${x.kind}`)}">${kindIcon}</span>${titleWithTicket('act-name', x.title, x.ticket, x.ticketUrl)}</div>
+            ${
+              shown.length
+                ? `<ul class="act-details">${shown.map((d) => `<li title="${esc(d)}">${esc(d)}</li>`).join('')}${
+                    more > 0 ? `<li class="more">${t('moreDetails', fmt(more))}</li>` : ''
+                  }</ul>`
+                : ''
+            }
+            <div class="act-date">${meta}</div>
           </div>
           <div class="act-nums"><span class="act-time">${esc(duration(x.activeMinutes))}</span><span class="act-used">${esc(fmt(x.used))} ${esc(unit())}</span></div>
-        </li>`,
-        )
+        </li>`;
+        })
         .join('')}</ul>`;
       if (!a.enabled) {
         body += `<div class="act-off muted">${t('activityPaused')} <button class="link" data-action="enableActivity" data-k="act-on2">${t('turnOn')}</button></div>`;
@@ -965,13 +1155,13 @@
         ],
         'lbl-display',
       )}</div>
-      <div class="field"><span class="field-label" id="lbl-sbicon">${t('statusBarIcon')}</span>${segmented(
+      <div class="field"><span class="field-label" id="lbl-sbicon">${t('widgetStyle')}</span>${segmented(
         'statusBarIcon',
         s.statusBarIcon,
         ['gauge', 'battery', 'ring', 'bars', 'none'].map((v) => [v, t(`icon_${v}`), glyph(v, lvl)]),
         'lbl-sbicon',
         'seg-glyphs',
-      )}</div>
+      )}<span class="row-hint">${t('widgetStyleHint')}</span></div>
       <div class="field"><span class="field-label" id="lbl-sbcolor">${t('statusBarColor')}</span>${swatches('statusBarColor', s.statusBarColor, 'lbl-sbcolor')}</div>
       <div class="row"><span class="row-label" id="lbl-align">${t('statusBarPosition')}</span>${segmented(
         'alignment',
@@ -1032,53 +1222,6 @@
       hasCopilot ? t('freeHint') : '',
     );
 
-    const modelChips = (s.preferredModels || [])
-      .map(
-        (m) =>
-          `<span class="tchip tchip-text">${esc(m)}<button class="tchip-x" data-action="removeModel" data-value="${esc(m)}" data-k="pm-${esc(m)}" title="${t(
-            'removeModel',
-            m,
-          )}" aria-label="${t('removeModel', m)}">${icon.close}</button></span>`,
-      )
-      .join('');
-    const addModel = addingModel
-      ? `<span class="tchip tchip-input tchip-input-text"><input type="text" spellcheck="false" autocomplete="off" data-k="model-new" id="model-new" aria-label="${t(
-          'addModel',
-        )}" placeholder="gpt-4.1"></span>`
-      : `<button class="tchip tchip-add" data-action="addModel" data-k="model-add" title="${t('addModel')}" aria-label="${t('addModel')}">${icon.plus}</button>`;
-    const freeModels = s.btwModel === 'included';
-    const chat = group(
-      icon.aside,
-      t('btwGroup'),
-      `<div class="field"><span class="field-label" id="lbl-btwmodel">${t('btwModel')}</span>${segmented(
-        'btwModel',
-        freeModels ? 'included' : 'chat',
-        [
-          ['chat', t('btwModelChat')],
-          ['included', t('btwModelFree')],
-        ],
-        'lbl-btwmodel',
-      )}<span class="row-hint">${t(freeModels ? 'btwModelInfoFree' : 'btwModelInfoChat')}</span></div>
-      <div class="field"><span class="field-label" id="lbl-btwopen">${t('btwOpenIn')}</span>${segmented(
-        'btwOpenIn',
-        s.btwOpenIn === 'window' ? 'window' : 'side',
-        [
-          ['side', t('btwOpenSide')],
-          ['window', t('btwOpenWindow')],
-        ],
-        'lbl-btwopen',
-      )}</div>
-      ${
-        freeModels
-          ? `<div class="field"><span class="field-label" id="lbl-models">${t('preferredModels')}<span class="field-hint"> · ${t(
-              'preferredModelsHint',
-            )}</span></span><div class="chips" role="group" aria-labelledby="lbl-models">${modelChips}${addModel}</div></div>`
-          : ''
-      }
-      ${row('btwIncludeChat', s.btwIncludeChat, t('btwIncludeChat'))}
-      <div class="btn-row"><button class="btn secondary small" data-cmd="btw" data-k="set-btw">${icon.aside}${t('askBtw')}</button></div>`,
-    );
-
     const tokenRow = `<div class="row"><div class="row-text"><span class="row-label">${t('billingToken')}</span><span class="row-hint">${
       s.billingTokenSet ? `${icon.check}${t('tokenStored')}` : t('billingTokenHint')
     }</span></div>${
@@ -1086,12 +1229,22 @@
         ? `<button class="link subtle" data-cmd="clearBillingToken" data-k="tok-rm2">${t('removeToken')}</button>`
         : `<button class="btn secondary small" data-cmd="configureBillingToken" data-k="tok-add2">${t('addToken')}</button>`
     }</div>`;
+    const activitySettings = group(
+      icon.branch,
+      t('activity'),
+      `${row('activityTracking', s.activityTracking, t('activityTracking'), t('activityTrackingHint'))}
+      <div class="field"><label class="field-label" for="ticket-url">${t('ticketUrl')}</label>
+        <input class="text" id="ticket-url" type="url" spellcheck="false" autocomplete="off" data-k="ticket-url" value="${esc(
+          s.ticketUrl || '',
+        )}" placeholder="https://jira.example.com/browse/{id}">
+        <span class="row-hint">${t('ticketUrlHint')}</span></div>`,
+    );
+
     const account = group(
       icon.account,
       t('accountGroup'),
       `${providerControl()}
       ${tokenRow}
-      ${row('activityTracking', s.activityTracking, t('activityTracking'), t('activityTrackingHint'))}
       <div class="field"><label class="field-label" for="api-url">${t('apiUrl')}</label>
         <input class="text" id="api-url" type="url" spellcheck="false" autocomplete="off" data-k="api-url" value="${esc(s.apiUrl || '')}" placeholder="${t(
           'apiUrlPlaceholder',
@@ -1103,7 +1256,7 @@
       </div>`,
     );
 
-    return `<div class="grid">${display}${appearance}${budget}${warnings}${copilot}${chat}${account}</div>`;
+    return `<div class="grid">${display}${appearance}${budget}${warnings}${copilot}${activitySettings}${account}</div>`;
   }
 
   // ---------------------------------------------------------------- accent
@@ -1191,7 +1344,7 @@
   }
 
   function historyPanel() {
-    return `<div class="grid">${activityCard()}${reviewCard()}${modelsCard()}</div>`;
+    return `<div class="grid">${currentCard()}${activityCard()}${reviewCard()}${modelsCard()}</div>`;
   }
 
   function tipsPanel() {
@@ -1310,11 +1463,8 @@
         }
       }
     }
-    for (const [on, id] of [
-      [addingThreshold, 'th-new'],
-      [addingModel, 'model-new'],
-    ]) {
-      const inp = on ? /** @type {HTMLInputElement | null} */ (document.getElementById(id)) : null;
+    if (addingThreshold) {
+      const inp = /** @type {HTMLInputElement | null} */ (document.getElementById('th-new'));
       if (inp && document.activeElement !== inp) {
         inp.focus();
       }
@@ -1330,9 +1480,6 @@
   function applyGeometry() {
     app.querySelectorAll('[data-w]').forEach((el) => {
       /** @type {HTMLElement} */ (el).style.width = `${clamp(Number(el.getAttribute('data-w')) || 0, 0, 100)}%`;
-    });
-    app.querySelectorAll('[data-l]').forEach((el) => {
-      /** @type {HTMLElement} */ (el).style.left = `${clamp(Number(el.getAttribute('data-l')) || 0, 0, 100)}%`;
     });
     app.querySelectorAll('.g-fill').forEach((el) => {
       const e = /** @type {SVGElement} */ (/** @type {unknown} */ (el));
@@ -1403,24 +1550,9 @@
     }
   }
 
-  function commitModel(input) {
-    const v = input.value.trim();
-    addingModel = false;
-    const list = model.settings.preferredModels || [];
-    if (v && !list.includes(v)) {
-      setSetting('preferredModels', list.concat(v));
-    } else {
-      render();
-    }
-    focusKey('model-add');
-  }
+  /** Text inputs committed on blur/Enter: element id → setting key. */
+  const TEXT_SETTINGS = { 'api-url': 'apiUrl', 'ticket-url': 'ticketUrl' };
 
-  function focusKey(k) {
-    const el = app.querySelector(`[data-k="${k}"]`);
-    if (el) {
-      /** @type {HTMLElement} */ (el).focus();
-    }
-  }
 
   app.addEventListener('click', (ev) => {
     const target = /** @type {HTMLElement} */ (ev.target);
@@ -1481,19 +1613,6 @@
         }
         break;
       }
-      case 'addModel':
-        addingModel = true;
-        render();
-        break;
-      case 'removeModel': {
-        const v = el.getAttribute('data-value');
-        setSetting(
-          'preferredModels',
-          (model.settings.preferredModels || []).filter((x) => x !== v),
-        );
-        focusKey('model-add');
-        break;
-      }
       case 'removeThreshold': {
         const v = Number(el.getAttribute('data-value'));
         setSetting(
@@ -1516,7 +1635,6 @@
     const changed = id !== ui.tab;
     ui.tab = id;
     addingThreshold = false;
-    addingModel = false;
     persist();
     if (changed) {
       render();
@@ -1544,11 +1662,12 @@
       }
       return;
     }
-    if (el.id === 'api-url') {
+    const textKey = TEXT_SETTINGS[el.id];
+    if (textKey) {
       const v = el.value.trim();
       el.value = v;
-      if (v !== (model.settings.apiUrl || '')) {
-        setSetting('apiUrl', v);
+      if (v !== (model.settings[textKey] || '')) {
+        setSetting(textKey, v);
       }
       return;
     }
@@ -1578,24 +1697,12 @@
       }
       return;
     }
-    if (el.id === 'model-new') {
-      if (ev.key === 'Enter') {
-        ev.preventDefault();
-        commitModel(el);
-      } else if (ev.key === 'Escape') {
-        ev.preventDefault();
-        addingModel = false;
-        render();
-        focusKey('model-add');
-      }
-      return;
-    }
-    if ((el.id === 'reserve' || el.id === 'api-url') && ev.key === 'Enter') {
+    if ((el.id === 'reserve' || TEXT_SETTINGS[el.id]) && ev.key === 'Enter') {
       el.blur();
       return;
     }
-    if (el.id === 'api-url' && ev.key === 'Escape') {
-      /** @type {HTMLInputElement} */ (el).value = model.settings.apiUrl || '';
+    if (TEXT_SETTINGS[el.id] && ev.key === 'Escape') {
+      /** @type {HTMLInputElement} */ (el).value = model.settings[TEXT_SETTINGS[el.id]] || '';
       el.blur();
       return;
     }
@@ -1636,8 +1743,6 @@
       const el = /** @type {HTMLElement} */ (ev.target);
       if (el && el.id === 'th-new' && addingThreshold) {
         commitThreshold(el);
-      } else if (el && el.id === 'model-new' && addingModel) {
-        commitModel(el);
       }
     },
     true,

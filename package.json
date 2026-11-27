@@ -11,7 +11,7 @@
     "url": "https://github.com/m3-13/vsc-contingent-watcher"
   },
   "engines": {
-    "vscode": "^1.90.0"
+    "vscode": "^1.110.0"
   },
   "categories": [
     "Other",
@@ -218,20 +218,11 @@
         "command": "contingentWatcher.btw",
         "title": "%cmd.btw%",
         "category": "Copilot Contingent"
-      },
-      {
-        "command": "contingentWatcher.btw.show",
-        "title": "%cmd.btwShow%",
-        "category": "Copilot Contingent"
       }
     ],
-    "chatParticipants": [
+    "chatPromptFiles": [
       {
-        "id": "contingentWatcher.btw",
-        "name": "btw",
-        "fullName": "btw",
-        "description": "%chat.btw.description%",
-        "isSticky": false
+        "path": "./prompts/btw.prompt.md"
       }
     ],
     "viewsContainers": {
@@ -438,36 +429,6 @@
           "default": true,
           "markdownDescription": "%cfg.activity%"
         },
-        "contingentWatcher.chat.preferredModels": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": [
-            "gpt-5-mini",
-            "gpt-4.1",
-            "gpt-4o"
-          ],
-          "markdownDescription": "%cfg.preferredModels%"
-        },
-        "contingentWatcher.btw.includeChat": {
-          "type": "boolean",
-          "default": true,
-          "markdownDescription": "%cfg.btwIncludeChat%"
-        },
-        "contingentWatcher.btw.model": {
-          "type": "string",
-          "enum": [
-            "chat",
-            "included"
-          ],
-          "enumDescriptions": [
-            "%cfg.btwModel.chat%",
-            "%cfg.btwModel.included%"
-          ],
-          "default": "chat",
-          "markdownDescription": "%cfg.btwModel%"
-        },
         "contingentWatcher.unit": {
           "type": "string",
           "enum": [
@@ -482,19 +443,6 @@
           ],
           "default": "auto",
           "markdownDescription": "%cfg.unit%"
-        },
-        "contingentWatcher.btw.openIn": {
-          "type": "string",
-          "enum": [
-            "side",
-            "window"
-          ],
-          "enumDescriptions": [
-            "%cfg.btwOpenIn.side%",
-            "%cfg.btwOpenIn.window%"
-          ],
-          "default": "side",
-          "markdownDescription": "%cfg.btwOpenIn%"
         }
       }
     },

@@ -405,9 +405,23 @@ test('commands: every manifest command is registered and runs; no askSparsam', a
   const openSettings = b.env.executed.find((e) => e.id === 'workbench.action.openSettings');
   assert.deepEqual(openSettings?.args, ['@ext:m3-13.copilot-contingent-watcher']);
   assert.ok(b.env.logs.includes('[show]'), 'showLog');
-  assert.equal(b.env.webviewPanels.length, 1, 'btw opens the btw window');
-  assert.equal(b.env.webviewPanels[0].showOptions.viewColumn, -2);
-  assert.match(b.env.webviewPanels[0].webview.html, /btw\.js/);
+  // btw puts "/btw " into the current chat input (the prompt file does the rest).
+  assert.deepEqual(b.env.executed.find((e) => e.id === 'workbench.action.chat.open')?.args, [{ query: '/btw ', isPartialQuery: true }]);
+  assert.equal(b.env.webviewPanels.length, 0, 'btw opens no extra window');
+});
+
+test('btw: /btw prompt file is contributed and shipped', () => {
+  const files = PKG.contributes.chatPromptFiles;
+  assert.deepEqual(files, [{ path: './prompts/btw.prompt.md' }]);
+  const text = fs.readFileSync(path.join(ROOT, 'prompts', 'btw.prompt.md'), 'utf8');
+  const front = /^---\n([\s\S]*?)\n---\n/.exec(text)?.[1] ?? '';
+  assert.match(front, /^name: btw$/m);
+  assert.match(front, /^description: .+/m);
+  assert.doesNotMatch(front, /^(mode|agent|tools|model):/m, 'runs in the current session, mode and model');
+  assert.match(text, /continue/i);
+  const ignore = fs.readFileSync(path.join(ROOT, '.vscodeignore'), 'utf8').split('\n');
+  assert.ok(!ignore.some((l) => /^prompts|^\*\*\/\*\.md$/.test(l.trim())), 'prompts/ is packaged');
+  assert.equal(PKG.contributes.chatParticipants, undefined);
 });
 
 test('commands: guided sign-in for github.com and GHE.com', async (t) => {
@@ -592,13 +606,8 @@ test('dashboard: every setSetting key writes the right configuration key and val
     ['alignment', 'left', 'contingentWatcher.statusBar.alignment', 'left'],
     ['alignment', 'middle', 'contingentWatcher.statusBar.alignment', 'right'],
     ['apiUrl', '  https://api.example.com  ', 'contingentWatcher.auth.apiUrl', 'https://api.example.com'],
-    ['preferredModels', [' gpt-4.1 ', 'gpt-4.1', '', 'gpt-5-mini'], 'contingentWatcher.chat.preferredModels', ['gpt-4.1', 'gpt-5-mini']],
-    ['btwModel', 'included', 'contingentWatcher.btw.model', 'included'],
-    ['btwModel', 'premium', 'contingentWatcher.btw.model', 'chat'],
-    ['btwOpenIn', 'window', 'contingentWatcher.btw.openIn', 'window'],
     ['unit', 'credits', 'contingentWatcher.unit', 'credits'],
     ['unit', 'bogus', 'contingentWatcher.unit', 'auto'],
-    ['btwIncludeChat', false, 'contingentWatcher.btw.includeChat', false],
     ['copilotCompletions', false, 'github.copilot.enable', { '*': false }],
     ['copilotNextEdit', false, 'github.copilot.nextEditSuggestions.enabled', false],
   ];
@@ -698,7 +707,8 @@ test('dashboard: every DashboardCommand is handled', async (t) => {
     configureBillingToken: () => assert.ok(b.env.notifications.some((n) => /fine-grained GitHub token/.test(n.message))),
     clearBillingToken: () => assert.equal(dash.model().models.state, 'notConfigured'),
     clearActivity: () => assert.ok(b.env.notifications.some((n) => /Clear the recorded activity/.test(n.message))),
-    btw: () => assert.ok(b.env.webviewPanels.length >= 1),
+    btw: () =>
+      assert.ok(b.env.executed.some((e) => e.id === 'workbench.action.chat.open' && (e.args?.[0] as any)?.query === '/btw ')),
     snoozeCompletions: () => undefined,
   };
   for (const c of commands) {
@@ -728,35 +738,6 @@ test('config: every contingentWatcher.* key read by the code exists in package.j
   const dash = b.dashboard();
   await dash.send({ type: 'command', command: 'btw' });
   assert.deepEqual([...b.env.unknownConfigReads], []);
-});
-
-test('btw window: ask, clear, copy, openSettings messages are handled', async (t) => {
-  const b = await boot(t);
-  await b.env.commands.get('contingentWatcher.btw')!();
-  const panel = b.env.webviewPanels[0];
-  panel.webview.send({ type: 'ready' });
-  await tick();
-  const init = panel.webview.posted.find((m: any) => m.type === 'init');
-  assert.ok(init, 'init posted');
-  assert.equal(init.strings.send, 'Send');
-  assert.deepEqual(init.focus, { prefill: undefined });
-  panel.webview.send({ type: 'ask', question: 'what is 2+2?' });
-  for (let i = 0; i < 20; i++) {
-    await tick();
-  }
-  const cards = panel.webview.posted.filter((m: any) => m.type === 'card').map((m: any) => m.card);
-  assert.ok(cards.length >= 1);
-  assert.equal(cards[0].question, 'what is 2+2?');
-  // No models in the fake → finished with an explanation, not stuck in "thinking".
-  assert.notEqual(cards.at(-1).status, 'thinking');
-  panel.webview.send({ type: 'clear' });
-  await tick();
-  assert.ok(panel.webview.posted.some((m: any) => m.type === 'clear'));
-  panel.webview.send({ type: 'openSettings' });
-  await tick();
-  assert.deepEqual(b.env.executed.find((e) => e.id === 'workbench.action.openSettings')?.args, ['contingentWatcher.chat.preferredModels']);
-  await b.env.commands.get('contingentWatcher.btw.show')!();
-  assert.equal(panel.reveals, 1);
 });
 
 // ------------------------------------------------------------------ refresh behaviour

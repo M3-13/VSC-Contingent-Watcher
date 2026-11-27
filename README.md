@@ -10,7 +10,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
   - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit pro Git-Branch, mit Verbrauch), Monatsrückblick, Verbrauch pro Modell
   - **Tipps:** Spartipps passend zur aktuellen Lage
   - **Einstellungen:** Anzeige, Warnungen, Budget, Akzentfarbe, Statusleisten-Icon und -Farbe, Copilot-Schalter
-- **`@btw` – Nebenfrage wie in Claude Code:** Tippe in deinem Chat `@btw deine Frage`. Die Antwort erscheint in einem **btw-Fenster neben dem Editor** (oder einem eigenen Fenster). Sie kennt den Verlauf dieses Chats und deinen Editor und nutzt das im Chat gewählte Modell (optional ein Gratis-Modell). Im Chat selbst steht nur eine kurze Zeile. Ohne Warten: `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` öffnet das btw-Fenster mit eigenem Eingabefeld. Fragen dort werden sofort beantwortet, auch während ein Agent im Chat arbeitet.
+- **`/btw` – Nebenfrage wie in Claude Code:** Tippe im Copilot-Chat `/btw deine Frage`, auch während der Agent arbeitet. Ab VS Code 1.110 lenkt das den laufenden Agenten kurz um („Steering“): Er beantwortet die Frage knapp im selben Chat mit dem Kontext und Modell der Session und arbeitet danach weiter. `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` setzt `/btw ` in die Chat-Eingabe.
 - **Credits statt Requests:** Meldet GitHub AI-Credits (nutzungsbasierte Abrechnung), zeigt die Extension Credits an. Das ist einstellbar über `contingentWatcher.unit`.
 - **Bedarf (geschätzt):** wie viel dein Monat bei deinem Tempo gebraucht hätte, auch wenn das Kontingent schon leer ist, und wie viel pro Tag gereicht hätte.
 - **Hinweis gegen Verfall:** In der letzten Monatswoche meldet die Extension, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.
@@ -46,11 +46,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `contingentWatcher.statusBar.color` | `auto` | Farbe des Statusleisten-Eintrags (Vorlage oder `#hex`). |
 | `contingentWatcher.warnings.surplusHint` | `true` | Hinweis, wenn Kontingent ungenutzt verfallen würde. |
 | `contingentWatcher.activity.enabled` | `true` | Aktive Zeit und Verbrauch pro Git-Branch aufzeichnen (nur lokal). |
-| `contingentWatcher.btw.includeChat` | `true` | Den aktuellen Copilot-Chat als Kontext für btw nutzen (lokal gelesen). |
 | `contingentWatcher.unit` | `auto` | Anzeige: `auto` (Credits, wenn vorhanden), `credits` oder `requests`. |
-| `contingentWatcher.btw.openIn` | `side` | Wo das btw-Fenster aufgeht: `side` (neben dem Editor) oder `window` (eigenes Fenster). |
-| `contingentWatcher.btw.model` | `chat` | Modell für btw: `chat` (wie im Chat) oder `included` (Gratis-Modell). |
-| `contingentWatcher.chat.preferredModels` | `gpt-5-mini, gpt-4.1, gpt-4o` | Gratis-Modelle für btw im Modus `included` (nur inklusive Modelle eintragen). |
 
 ## Befehle
 

@@ -54,21 +54,22 @@ test('manifest: commands in package.json and registerCommand() match; executed o
     ...settings,
     'contingentWatcher.status',
     'contingentWatcher.dashboard',
-    'contingentWatcher.btwAnswers',
     'contingentWatcher.billingToken',
     'contingentWatcher.gettingStarted',
-    'contingentWatcher.btw',
-    'contingentWatcher.btw.chosenModel', // globalState key
   ]);
   assert.deepEqual([...refs].filter((r) => !known.has(r)), [], 'unknown contingentWatcher.* ids referenced');
   assert.ok(!/askSparsam/i.test(ALL_SRC + JSON.stringify(PKG)), 'askSparsam removed');
 });
 
-test('manifest: views, chat participant and walkthrough media exist', () => {
+test('manifest: views, /btw prompt file and walkthrough media exist', () => {
   assert.ok(ALL_SRC.includes("viewId = 'contingentWatcher.dashboard'"));
   assert.ok(PKG.contributes.views.contingentWatcher.some((v: { id: string }) => v.id === 'contingentWatcher.dashboard'));
-  assert.ok(ALL_SRC.includes("BTW_PARTICIPANT_ID = 'contingentWatcher.btw'"));
-  assert.equal(PKG.contributes.chatParticipants[0].id, 'contingentWatcher.btw');
+  assert.equal(PKG.contributes.chatParticipants, undefined, 'no chat participant');
+  for (const f of PKG.contributes.chatPromptFiles) {
+    assert.ok(fs.existsSync(path.join(ROOT, f.path)), f.path);
+  }
+  // chatPromptFiles needs VS Code 1.110+ (also for sending while the agent works).
+  assert.match(PKG.engines.vscode, /^\^1\.(1[1-9]\d|[2-9]\d\d)\./);
   for (const step of PKG.contributes.walkthroughs[0].steps) {
     assert.ok(fs.existsSync(path.join(ROOT, step.media.markdown)), step.media.markdown);
   }
@@ -117,7 +118,7 @@ test('i18n: every vscode.l10n.t literal and every tip has a German translation w
     }
   }
   TIPS.forEach((t) => strings.add(t.text));
-  assert.ok(strings.size > 300, `${strings.size} strings`);
+  assert.ok(strings.size > 250, `${strings.size} strings`);
   assert.deepEqual([...strings].filter((s) => DE[s] === undefined), [], 'missing German translation');
   assert.deepEqual([...strings].filter((s) => DE[s] !== undefined && placeholders(s) !== placeholders(DE[s])), [], 'placeholder mismatch');
   assert.deepEqual(Object.keys(DE).filter((k) => !strings.has(k)), [], 'stale keys in the German bundle');
@@ -126,7 +127,7 @@ test('i18n: every vscode.l10n.t literal and every tip has a German translation w
   assert.deepEqual(nonLiteral.sort(), ['extension.ts:t.text', 'statusBar.ts:tip.text']);
 });
 
-test('i18n: dashboard.js and btw.js only use string ids the extension provides', () => {
+test('i18n: dashboard.js only uses string ids the extension provides', () => {
   const js = read('media/dashboard/dashboard.js');
   const ds = read('src/dashboardStrings.ts');
   const keys = new Set([...ds.matchAll(/^\s*(\w+):\s*vscode\.l10n/gm)].map((m) => m[1]));
@@ -145,9 +146,4 @@ test('i18n: dashboard.js and btw.js only use string ids the extension provides',
       assert.ok(keys.has(`${prefix}_${v}`), `${prefix}_${v}`);
     }
   }
-  const btw = read('media/btw/btw.js');
-  const panel = read('src/btw/answersPanel.ts').split('function webviewStrings')[1];
-  const bk = new Set([...panel.matchAll(/^\s*(\w+):\s*vscode/gm)].map((m) => m[1]));
-  const bu = new Set([...btw.matchAll(/\bt\(\s*'(\w+)'/g), ...btw.matchAll(/\bS\.(\w+)/g)].map((m) => m[1]));
-  assert.deepEqual([...bu].filter((k) => !bk.has(k)), [], 'btw ids without a string');
 });

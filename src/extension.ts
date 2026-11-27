@@ -268,10 +268,6 @@ class Controller implements vscode.Disposable {
         refreshIntervalMinutes: this.cfg.refreshIntervalMinutes,
         alignment: this.cfg.alignment,
         apiUrl: own.get<string>('auth.apiUrl', ''),
-        preferredModels: own.get<string[]>('chat.preferredModels', ['gpt-5-mini', 'gpt-4.1', 'gpt-4o']),
-        btwIncludeChat: own.get<boolean>('btw.includeChat', true),
-        btwModel: own.get<string>('btw.model', 'chat') === 'included' ? 'included' : 'chat',
-        btwOpenIn: own.get<string>('btw.openIn', 'side') === 'window' ? 'window' : 'side',
         unit: (['credits', 'requests'] as const).find((u) => u === own.get<string>('unit')) ?? 'auto',
         accent: this.cfg.accent,
         statusBarIcon: this.cfg.statusBarIcon,
@@ -471,12 +467,6 @@ class Controller implements vscode.Disposable {
       v = days.map((d) => WEEKDAY_IDS[d]);
     } else if (key === 'unit') {
       v = value === 'credits' || value === 'requests' ? value : 'auto';
-    } else if (key === 'btwOpenIn') {
-      v = value === 'window' ? 'window' : 'side';
-    } else if (key === 'btwModel') {
-      v = value === 'included' ? 'included' : 'chat';
-    } else if (key === 'preferredModels') {
-      v = Array.isArray(value) ? [...new Set(value.map((x) => String(x).trim()).filter(Boolean))] : undefined;
     } else if (key === 'thresholds') {
       v = Array.isArray(value)
         ? [...new Set(value.map(Number).filter((n) => Number.isFinite(n) && n > 0 && n <= 100))].sort((a, b) => a - b)
@@ -506,9 +496,10 @@ export function activate(context: vscode.ExtensionContext): void {
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
-    vscode.commands.registerCommand('contingentWatcher.btw', () => openBtwInput()),
-    vscode.commands.registerCommand('contingentWatcher.btw.show', () => showBtwPanel()),
-    registerBtwParticipant(context, log),
+    // btw = the /btw prompt file (prompts/btw.prompt.md): put "/btw " into the current chat input.
+    vscode.commands.registerCommand('contingentWatcher.btw', () =>
+      vscode.commands.executeCommand('workbench.action.chat.open', { query: '/btw ', isPartialQuery: true }),
+    ),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
     vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.manualRefresh()),

@@ -179,7 +179,7 @@ export const TIPS: Tip[] = [
   {
     id: "sideQuestions",
     when: ["general", "ahead"],
-    text: "Ask quick side questions with @btw (or in a separate chat) so they don't bloat the context of your main task.",
+    text: "Need to know something while the agent works? Type /btw and your question: it's answered inline, then the agent continues.",
   },
   {
     id: "planMonthStart",
