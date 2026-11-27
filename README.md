@@ -7,7 +7,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 - Zeigt verbleibendes Kontingent, Verbrauch, Prozent oder Tagesbudget in der Statusleiste. Das Icon zeigt den Füllstand.
 - **Dashboard** (Klick auf die Statusleiste oder das Icon in der Activity Bar) mit 4 Tabs:
   - **Übersicht:** Tachometer, Heute, Tagesbudget, Tempo, Puffer, Prognose, Tagesdiagramm und ein Hinweis gegen Verfall
-  - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit pro Git-Branch, mit Verbrauch), Monatsrückblick, Verbrauch pro Modell
+  - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit und Verbrauch; ein Arbeitspaket endet mit deinem Commit – auch auf main/master – oder mit *Aufgabe abschließen*; Commits zum selben Ticket werden zusammengefasst), Monatsrückblick, Verbrauch pro Modell
   - **Tipps:** Spartipps passend zur aktuellen Lage
   - **Einstellungen:** Anzeige, Warnungen, Budget, Akzentfarbe, Statusleisten-Icon und -Farbe, Copilot-Schalter
 - **`/btw` – Nebenfrage wie in Claude Code:** Tippe im Copilot-Chat `/btw deine Frage`, auch während der Agent arbeitet. Ab VS Code 1.110 lenkt das den laufenden Agenten kurz um („Steering“): Er beantwortet die Frage knapp im selben Chat mit dem Kontext und Modell der Session und arbeitet danach weiter. `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` setzt `/btw ` in die Chat-Eingabe.
@@ -45,7 +45,9 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `contingentWatcher.statusBar.icon` | `gauge` | Icon-Stil: `gauge`, `battery`, `ring`, `bars`, `none`. |
 | `contingentWatcher.statusBar.color` | `auto` | Farbe des Statusleisten-Eintrags (Vorlage oder `#hex`). |
 | `contingentWatcher.warnings.surplusHint` | `true` | Hinweis, wenn Kontingent ungenutzt verfallen würde. |
-| `contingentWatcher.activity.enabled` | `true` | Aktive Zeit und Verbrauch pro Git-Branch aufzeichnen (nur lokal). |
+| `contingentWatcher.activity.enabled` | `true` | Aktive Zeit und Verbrauch pro Arbeitspaket (bis zum nächsten eigenen Commit) aufzeichnen (nur lokal). |
+| `contingentWatcher.activity.ticketPattern` | Jira, `#123`, `AB#123` | Regex für Ticket-IDs in Commit-Nachricht und Branch-Name. |
+| `contingentWatcher.activity.ticketUrl` | leer | Link-Vorlage, z. B. `https://jira.example.com/browse/{id}`. |
 | `contingentWatcher.unit` | `auto` | Anzeige: `auto` (Credits, wenn vorhanden), `credits` oder `requests`. |
 
 ## Befehle

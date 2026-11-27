@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0
+
+- `/btw` als Slash-Befehl im Copilot-Chat: Nebenfrage während der Agent arbeitet, inline beantwortet (Steering, VS Code ≥ 1.110); btw-Fenster, @btw und Chat-Speicher-Zugriff entfernt
+- Verlauf: Arbeit endet mit eigenem Commit (auch auf main), Tickets (PROJ-123, #45, AB#12) bündeln Commits, manuelle Aufgaben, optionaler Ticket-Link
+- Übersicht: Widget folgt dem gewählten Stil (Tachometer, Batterie, Ring, Balken); darunter nur „Monat vergangen“
+- Zuverlässiger Auto-Refresh, Animation beim manuellen Refresh
+
 ## 0.2.0
 
 - Arbeitstage frei wählbar (z. B. Teilzeit Mo/Di/Do): Budget, Tempo, Prognose und Streak rechnen nur mit diesen Tagen

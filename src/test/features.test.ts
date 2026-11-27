@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { addActiveTime, addUsage, isActive, itemId } from '../core/activity';
+import { addActiveTime, addUsage, closeWithCommit, compileTicketPattern, emptyState } from '../core/activity';
 import { fillLevel, iconFor, resolveColor } from '../core/appearance';
 import { parseModelUsage } from '../core/billing';
 import { addCycle, summarizeCycle } from '../core/cycles';
@@ -62,30 +62,28 @@ test('cycles: summary has peak day and active days; addCycle dedupes and sorts',
   assert.equal(list[0].used, 151);
 });
 
-test('activity: feature branches accumulate, default branches split per day', () => {
+test('activity: time accumulates per repo+branch until a commit closes the unit (also on main)', () => {
   const t0 = new Date(2026, 10, 20, 10).getTime();
-  let items = addActiveTime([], { repo: 'app', branch: 'feature/login' }, t0, 30_000, 'Add login form');
-  items = addActiveTime(items, { repo: 'app', branch: 'feature/login' }, t0 + DAY, 30_000);
-  assert.equal(items.length, 1);
-  assert.equal(items[0].activeMs, 60_000);
-  assert.equal(items[0].detail, 'Add login form');
-
-  items = addActiveTime(items, { repo: 'app', branch: 'main' }, t0, 30_000);
-  items = addActiveTime(items, { repo: 'app', branch: 'main' }, t0 + DAY, 30_000);
-  assert.equal(items.filter((i) => i.branch === 'main').length, 2);
-  assert.notEqual(itemId({ repo: 'app', branch: 'main' }, t0), itemId({ repo: 'app', branch: 'main' }, t0 + DAY));
+  const main = { repo: 'app', branch: 'main' };
+  let s = addActiveTime(emptyState(), main, t0, 30_000);
+  s = addActiveTime(s, main, t0 + DAY, 30_000);
+  s = addActiveTime(s, { repo: 'app', branch: 'feature/login' }, t0, 30_000);
+  assert.equal(s.open.length, 2);
+  assert.equal(s.open.find((o) => o.branch === 'main')!.activeMs, 60_000);
+  s = closeWithCommit(s, main, { hash: 'b', message: 'Add login form', parents: ['a'] }, t0 + DAY);
+  assert.equal(s.units.length, 1);
+  assert.equal(s.units[0].activeMs, 60_000);
+  assert.equal(s.open.length, 1, 'feature branch unit stays open');
+  assert.ok(compileTicketPattern(undefined).test('PROJ-1'));
 });
 
-test('activity: usage attribution and active flag', () => {
+test('activity: usage attribution only for positive amounts', () => {
   const t0 = new Date(2026, 10, 20, 10).getTime();
   const key = { repo: 'app', branch: 'feature/x' };
-  let items = addUsage([], key, t0, 3);
-  items = addUsage(items, key, t0, 0);
-  items = addUsage(items, key, t0, -2);
-  assert.equal(items[0].used, 3);
-  assert.ok(isActive(items[0], key, t0 + 60_000));
-  assert.ok(!isActive(items[0], key, t0 + 60 * 60_000));
-  assert.ok(!isActive(items[0], { repo: 'app', branch: 'other' }, t0));
+  let s = addUsage(emptyState(), key, t0, 3);
+  s = addUsage(s, key, t0, 0);
+  s = addUsage(s, key, t0, -2);
+  assert.equal(s.open[0].used, 3);
 });
 
 test('billing: aggregates usage per model, tolerant to field names', () => {

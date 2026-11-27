@@ -600,6 +600,8 @@ test('dashboard: every setSetting key writes the right configuration key and val
     ['statusBarColor', '#ff8800', 'contingentWatcher.statusBar.color', '#ff8800'],
     ['surplusHint', false, 'contingentWatcher.warnings.surplusHint', false],
     ['activityTracking', false, 'contingentWatcher.activity.enabled', false],
+    ['ticketUrl', ' https://jira.example.com/browse/{id} ', 'contingentWatcher.activity.ticketUrl', 'https://jira.example.com/browse/{id}'],
+    ['ticketUrl', 'javascript:alert(1)', 'contingentWatcher.activity.ticketUrl', ''],
     ['refreshIntervalMinutes', 500, 'contingentWatcher.refreshIntervalMinutes', 120],
     ['refreshIntervalMinutes', 1, 'contingentWatcher.refreshIntervalMinutes', 2],
     ['refreshIntervalMinutes', 15, 'contingentWatcher.refreshIntervalMinutes', 15],
@@ -686,9 +688,10 @@ test('dashboard: every DashboardCommand is handled', async (t) => {
   const dash = b.dashboard();
   b.env.quickPickAnswer = () => undefined;
   b.env.notificationAnswer = (n) => (n.message.includes('Clear the recorded activity') ? 'Clear' : undefined);
+  b.env.inputBoxAnswer = (o) => (o?.title === 'Start task' ? 'PROJ-7 Review' : undefined);
   const src = fs.readFileSync(path.join(ROOT, 'src', 'core', 'dashboardModel.ts'), 'utf8');
   const commands = [...src.split('export type DashboardCommand')[1].split(';')[0].matchAll(/'(\w+)'/g)].map((x) => x[1]);
-  assert.equal(commands.length, 15);
+  assert.equal(commands.length, 17);
   const expectations: Record<string, () => void> = {
     refresh: () => assert.ok(b.fetchCalls.length >= 2),
     signIn: () => undefined,
@@ -707,6 +710,12 @@ test('dashboard: every DashboardCommand is handled', async (t) => {
     configureBillingToken: () => assert.ok(b.env.notifications.some((n) => /fine-grained GitHub token/.test(n.message))),
     clearBillingToken: () => assert.equal(dash.model().models.state, 'notConfigured'),
     clearActivity: () => assert.ok(b.env.notifications.some((n) => /Clear the recorded activity/.test(n.message))),
+    startTask: () => assert.deepEqual([dash.model().activity.current?.manual, dash.model().activity.current?.title], [true, 'PROJ-7 Review']),
+    finishTask: () => {
+      const m = dash.model().activity;
+      assert.equal(m.current, undefined);
+      assert.deepEqual([m.items[0].kind, m.items[0].title, m.items[0].details], ['manual', 'PROJ-7', ['PROJ-7 Review']]);
+    },
     btw: () =>
       assert.ok(b.env.executed.some((e) => e.id === 'workbench.action.chat.open' && (e.args?.[0] as any)?.query === '/btw ')),
     snoozeCompletions: () => undefined,
@@ -819,4 +828,96 @@ test('month review label is "November 2026" in UTC/Europe', async (t) => {
   if (new Date(Date.UTC(2026, 10, 1)).getDate() === 1) {
     assert.equal(b.dashboard().model().review.cycles[0].label, 'November 2026');
   }
+});
+
+// ------------------------------------------------------------------ activity (git units, tickets, legacy)
+
+/** A fake built-in git extension with one repository. */
+function fakeGit(head: { name?: string; commit?: string }, email = 'me@example.com') {
+  const listeners: (() => void)[] = [];
+  const commits = new Map<string, any>();
+  const repo = {
+    rootUri: { fsPath: '/work/app', scheme: 'file', path: '/work/app' },
+    state: { HEAD: head, onDidChange: (l: () => void) => (listeners.push(l), { dispose: () => undefined }) },
+    getCommit: async (h: string) => {
+      if (!commits.has(h)) {
+        throw new Error(`unknown ${h}`);
+      }
+      return commits.get(h);
+    },
+    getConfig: async (k: string) => (k === 'user.email' ? email : ''),
+  };
+  const api = { repositories: [repo], getRepository: () => repo };
+  return {
+    ext: { id: 'vscode.git', isActive: true, exports: { getAPI: () => api } },
+    /** Moves HEAD (commit, checkout, pull) and notifies like the git extension does. */
+    move(next: { name?: string; commit: string }, c?: { message: string; parents: string[]; authorEmail?: string }) {
+      if (c) {
+        commits.set(next.commit, { hash: next.commit, authorEmail: 'me@example.com', commitDate: new Date(Date.now()), ...c });
+      }
+      repo.state.HEAD = next;
+      listeners.forEach((l) => l());
+    },
+  };
+}
+
+test('activity: own commit on main closes the unit; pull and checkout do not; tickets group with links', async (t) => {
+  const git = fakeGit({ name: 'main', commit: 'a' });
+  const b = await boot(t, { extensions: { 'vscode.git': git.ext }, config: { 'contingentWatcher.activity.ticketUrl': 'https://jira.example.com/browse/{id}' } });
+  const dash = b.dashboard();
+  const used = async (remaining: number) => {
+    b.setBody(() => json(BODIES.requests(remaining)));
+    await b.refresh();
+    await settle(b.env);
+  };
+  await used(110); // +10 on main
+  let a = dash.model().activity;
+  assert.deepEqual([a.current?.title, a.current?.used, a.current?.manual], ['Uncommitted work on main', 10, false]);
+  assert.deepEqual(a.items, []);
+
+  git.move({ name: 'main', commit: 'b' }, { message: 'Fix login redirect\n\nbody', parents: ['a'] });
+  await settle(b.env);
+  a = dash.model().activity;
+  assert.equal(a.current, undefined);
+  assert.deepEqual(a.items.map((i: any) => [i.kind, i.title, i.used, i.commits]), [['commit', 'Fix login redirect', 10, 1]]);
+
+  // A colleague's commit arrives by fast-forward pull: no new item.
+  git.move({ name: 'main', commit: 'c' }, { message: 'Colleague work', parents: ['b'], authorEmail: 'colleague@example.com' });
+  // Checkout of a feature branch: no new item.
+  git.move({ name: 'feature/PROJ-5-validation', commit: 'z' }, { message: 'base', parents: ['q'] });
+  await settle(b.env);
+  assert.equal(dash.model().activity.items.length, 1);
+
+  await used(105); // +5 on the feature branch
+  a = dash.model().activity;
+  assert.deepEqual([a.current?.title, a.current?.ticket, a.current?.ticketUrl], ['PROJ-5', 'PROJ-5', 'https://jira.example.com/browse/PROJ-5']);
+  git.move({ name: 'feature/PROJ-5-validation', commit: 'y' }, { message: 'Add validation', parents: ['z'] });
+  await settle(b.env);
+  a = dash.model().activity;
+  assert.deepEqual(a.items.map((i: any) => [i.kind, i.title, i.used]), [
+    ['ticket', 'PROJ-5', 5],
+    ['commit', 'Fix login redirect', 10],
+  ]);
+  assert.equal(a.items[0].ticketUrl, 'https://jira.example.com/browse/PROJ-5');
+  assert.deepEqual(a.items[0].details, ['Add validation']);
+  assert.equal(dash.model().settings.ticketUrl, 'https://jira.example.com/browse/{id}');
+  // Stored locally in the new format, HEAD remembered for the next start.
+  const stored = b.ctx.globalState.get<any>('activity');
+  assert.equal(stored.version, 2);
+  assert.equal(stored.heads['/work/app'], 'y');
+});
+
+test('activity: old stored per-branch items are kept as legacy items', async (t) => {
+  const old = [
+    { id: 'app::feature/x', repo: 'app', branch: 'feature/x', detail: 'Add x', start: NOW - 3 * D, end: NOW - 2 * D, activeMs: 25 * 60_000, used: 4 },
+    { id: 'app::main::2026-11-20', repo: 'app', branch: 'main', day: '2026-11-20', start: NOW - 6 * D, end: NOW - 6 * D + 1000, activeMs: 60_000, used: 0 },
+  ];
+  const b = await boot(t, { globalState: { activity: old } });
+  const items = b.dashboard().model().activity.items;
+  assert.deepEqual(items.map((i: any) => [i.kind, i.title.split(' · ')[0], i.activeMinutes, i.used]), [
+    ['legacy', 'feature/x', 25, 4],
+    ['legacy', 'main', 1, 0],
+  ]);
+  assert.match(items[1].title, /^main · \S/, 'per-day items keep the date in the title');
+  assert.deepEqual(items[0].details, ['Add x']);
 });
