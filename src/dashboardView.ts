@@ -29,6 +29,8 @@ const COMMANDS: Record<DashboardCommand, true> = {
   configureBillingToken: true,
   clearBillingToken: true,
   clearActivity: true,
+  startTask: true,
+  finishTask: true,
   btw: true,
   snoozeCompletions: true,
 };
@@ -36,6 +38,7 @@ const COMMANDS: Record<DashboardCommand, true> = {
 const SETTINGS: Record<DashboardSettingKey, true> = {
   display: true,
   workDays: true,
+  ticketUrl: true,
   reserve: true,
   thresholds: true,
   warningsEnabled: true,
@@ -52,10 +55,6 @@ const SETTINGS: Record<DashboardSettingKey, true> = {
   refreshIntervalMinutes: true,
   alignment: true,
   apiUrl: true,
-  preferredModels: true,
-  btwModel: true,
-  btwOpenIn: true,
-  btwIncludeChat: true,
   copilotEagerness: true,
   copilotLanguage: true,
   unit: true,

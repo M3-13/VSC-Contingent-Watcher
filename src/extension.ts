@@ -18,7 +18,6 @@ import { ActivityTracker } from './activityTracker';
 import { guidedSignIn } from './signIn';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
-import { openBtwInput, registerBtwParticipant, showBtwPanel } from './chat/btwParticipant';
 import { resolveColor } from './core/appearance';
 import { expectedSurplus } from './core/surplus';
 
@@ -44,10 +43,6 @@ const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   refreshIntervalMinutes: 'refreshIntervalMinutes',
   alignment: 'statusBar.alignment',
   apiUrl: 'auth.apiUrl',
-  preferredModels: 'chat.preferredModels',
-  btwIncludeChat: 'btw.includeChat',
-  btwModel: 'btw.model',
-  btwOpenIn: 'btw.openIn',
   unit: 'unit',
 };
 

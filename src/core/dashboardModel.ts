@@ -118,28 +118,56 @@ export interface DashboardModel {
     }[];
   };
   /** What was worked on and how long it took (per git branch, active time only). */
+  /**
+   * What was worked on and how long it took. A work unit ends with a commit
+   * (on any branch, including main), or when a manually started task is
+   * finished. Units with the same ticket id are grouped into one item.
+   */
   activity: {
     enabled: boolean;
+    /** The unit currently being worked on (not yet committed/finished). */
+    current?: {
+      title: string;
+      ticket?: string;
+      ticketUrl?: string;
+      /** True if started manually via "Start task". */
+      manual: boolean;
+      repo?: string;
+      branch?: string;
+      startedAt: number;
+      activeMinutes: number;
+      used: number;
+    };
+    /** Finished work, newest first. */
     items: {
       id: string;
-      /** Human-readable title (branch name, or "main · 24 Nov"). */
+      /** Ticket id or first commit subject. */
       title: string;
-      /** Last commit message on that branch, if known. */
-      detail?: string;
+      /** Ticket id if found in commits/branch (e.g. "PROJ-123", "#45"). */
+      ticket?: string;
+      /** Link to the ticket if a ticket URL template is configured. */
+      ticketUrl?: string;
+      /** Commit subjects (newest first, max 5) or the manual task name. */
+      details: string[];
+      kind: 'ticket' | 'commit' | 'manual' | 'legacy';
       repo: string;
+      branch?: string;
       /** Epoch ms of first and last activity. */
       start: number;
       end: number;
       activeMinutes: number;
-      /** Quota used while this item was active. */
+      /** Allowance used while working on it. */
       used: number;
-      active: boolean;
+      commits: number;
     }[];
   };
+
   settings: {
     display: 'remaining' | 'used' | 'percent' | 'dailyBudget';
     /** Work days (0 = Sunday … 6 = Saturday) the budget is spread over. */
     workDays: number[];
+    /** Ticket link template, e.g. "https://jira.example.com/browse/{id}" (empty = no links). */
+    ticketUrl: string;
     reserve: number;
     thresholds: number[];
     warningsEnabled: boolean;
@@ -164,16 +192,8 @@ export interface DashboardModel {
     alignment: 'left' | 'right';
     /** Optional API base URL override (empty = automatic). */
     apiUrl: string;
-    /** Which model btw uses: the current chat model or a free (included) model. */
-    btwModel: 'chat' | 'included';
-    /** Where the btw answer window opens. */
-    btwOpenIn: 'side' | 'window';
     /** Which quota to show if GitHub reports both: credits (usage-based) or requests. */
     unit: 'auto' | 'credits' | 'requests';
-    /** Included model families btw may use in 'included' mode, in order. */
-    preferredModels: string[];
-    /** Include the current Copilot chat conversation as btw context. */
-    btwIncludeChat: boolean;
     /**
      * Copilot's own options, discovered at runtime from the installed Copilot
      * extension (undefined = not available in this Copilot version).
@@ -201,6 +221,8 @@ export type DashboardCommand =
   | 'configureBillingToken'
   | 'clearBillingToken'
   | 'clearActivity'
+  | 'startTask'
+  | 'finishTask'
   | 'btw'
   | 'snoozeCompletions';
 
@@ -208,6 +230,7 @@ export type DashboardCommand =
 export type DashboardSettingKey =
   | 'display'
   | 'workDays'
+  | 'ticketUrl'
   | 'reserve'
   | 'thresholds'
   | 'warningsEnabled'
@@ -224,11 +247,7 @@ export type DashboardSettingKey =
   | 'refreshIntervalMinutes'
   | 'alignment'
   | 'apiUrl'
-  | 'preferredModels'
-  | 'btwModel'
-  | 'btwOpenIn'
   | 'unit'
-  | 'btwIncludeChat'
   | 'copilotEagerness'
   | 'copilotLanguage';
 
