@@ -15,6 +15,7 @@ import { State } from './state';
 import { StatusBar, ViewState } from './statusBar';
 import { ProviderId } from './auth';
 import { ActivityTracker } from './activityTracker';
+import { buildItems, compileTicketPattern, currentWork, DisplayOptions } from './core/activity';
 import { guidedSignIn } from './signIn';
 import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
@@ -40,6 +41,7 @@ const SETTING_KEYS: Partial<Record<DashboardSettingKey, string>> = {
   statusBarColor: 'statusBar.color',
   surplusHint: 'warnings.surplusHint',
   activityTracking: 'activity.enabled',
+  ticketUrl: 'activity.ticketUrl',
   refreshIntervalMinutes: 'refreshIntervalMinutes',
   alignment: 'statusBar.alignment',
   apiUrl: 'auth.apiUrl',
@@ -253,6 +255,7 @@ class Controller implements vscode.Disposable {
       settings: {
         display: this.cfg.display,
         workDays: this.cfg.workDays,
+        ticketUrl: this.cfg.ticketUrl,
         reserve: this.cfg.reserve,
         thresholds: this.cfg.thresholds,
         warningsEnabled: this.cfg.warningsEnabled,
@@ -368,21 +371,44 @@ class Controller implements vscode.Disposable {
   }
 
   private activitySection(): DashboardModel['activity'] {
-    const { items, isActive } = this.activity.snapshot();
+    const { state, key } = this.activity.snapshot();
+    const opts: DisplayOptions = {
+      ticketPattern: compileTicketPattern(this.cfg.ticketPattern),
+      ticketUrl: this.cfg.ticketUrl,
+      // Old per-branch/per-day items keep their old title.
+      legacyTitle: (u) => (u.day ? `${u.branch ?? u.repo} · ${fmtDate(new Date(u.start))}` : (u.branch ?? u.repo)),
+    };
+    const cur = currentWork(state, key, opts);
     return {
       enabled: this.cfg.activityTracking,
-      items: items.slice(0, 50).map((i) => ({
-        id: i.id,
-        title: i.day ? `${i.branch ?? i.repo} · ${fmtDate(new Date(i.start))}` : (i.branch ?? i.repo),
-        detail: i.detail,
-        repo: i.repo,
-        start: i.start,
-        end: i.end,
-        activeMinutes: Math.round(i.activeMs / 60_000),
-        used: Math.round(i.used * 10) / 10,
-        active: isActive(i),
-      })),
+      current: cur && {
+        ...cur,
+        title: cur.title ?? vscode.l10n.t('Uncommitted work on {0}', cur.branch ?? cur.repo ?? ''),
+      },
+      items: buildItems(state.units, opts),
     };
+  }
+
+  /** Asks for a task name (or ticket id) and starts it; a running task is finished first. */
+  async startTask(): Promise<void> {
+    const running = this.activity.manualTask;
+    const name = await vscode.window.showInputBox({
+      title: vscode.l10n.t('Start task'),
+      prompt: running
+        ? vscode.l10n.t('"{0}" is still running and will be finished first.', running.name)
+        : vscode.l10n.t('Until you finish it, all active time and allowance usage count for this task.'),
+      placeHolder: vscode.l10n.t('Task name or ticket id, e.g. PROJ-123'),
+      validateInput: (v) => (v.trim() ? undefined : vscode.l10n.t('Please enter a name.')),
+    });
+    if (name?.trim()) {
+      await this.activity.startTask(name);
+    }
+  }
+
+  async finishTask(): Promise<void> {
+    if (!(await this.activity.finishTask())) {
+      void vscode.window.showInformationMessage(vscode.l10n.t('No task is running.'));
+    }
   }
 
   private githubUrl(url: string): string {
@@ -425,6 +451,10 @@ class Controller implements vscode.Disposable {
         const ok = await vscode.window.showWarningMessage(vscode.l10n.t('Clear the recorded activity history?'), { modal: true }, yes);
         return ok === yes ? this.activity.clear() : undefined;
       }
+      case 'startTask':
+        return this.startTask();
+      case 'finishTask':
+        return this.finishTask();
       case 'snoozeCompletions':
         return this.copilot.snooze();
       case 'btw':
@@ -459,6 +489,9 @@ class Controller implements vscode.Disposable {
       v = value === 'left' ? 'left' : 'right';
     } else if (key === 'apiUrl') {
       v = typeof value === 'string' ? value.trim() : '';
+    } else if (key === 'ticketUrl') {
+      // Links only to http(s) pages; anything else clears the template.
+      v = typeof value === 'string' && /^https?:\/\/\S+$/i.test(value.trim()) ? value.trim() : '';
     } else if (key === 'workDays') {
       const days = Array.isArray(value) ? [...new Set(value.map(Number).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))].sort((a, b) => a - b) : [];
       if (days.length === 0) {
@@ -509,6 +542,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand('contingentWatcher.openSettings', () =>
       vscode.commands.executeCommand('workbench.action.openSettings', `@ext:${context.extension.id}`),
     ),
+    vscode.commands.registerCommand('contingentWatcher.startTask', () => ctl.onDashboardCommand('startTask')),
+    vscode.commands.registerCommand('contingentWatcher.finishTask', () => ctl.onDashboardCommand('finishTask')),
     vscode.commands.registerCommand('contingentWatcher.snooze', async () => {
       await ctl.onDashboardCommand('snooze');
       vscode.window.setStatusBarMessage(vscode.l10n.t('Copilot quota warnings snoozed for 24h'), 3000);

@@ -902,8 +902,6 @@ button { font: inherit; color: inherit; }
   text-align: center;
 }
 .tchip-input:focus-within { border-color: var(--vscode-focusBorder); }
-.tchip-text { max-width: 100%; font-variant-numeric: normal; }
-.tchip-input-text input { width: 110px; text-align: left; padding-left: 6px; }
 
 .snooze-row { display: flex; }
 .snooze {

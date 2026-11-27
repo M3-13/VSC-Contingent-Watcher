@@ -215,6 +215,16 @@
         "category": "Copilot Contingent"
       },
       {
+        "command": "contingentWatcher.startTask",
+        "title": "%cmd.startTask%",
+        "category": "Copilot Contingent"
+      },
+      {
+        "command": "contingentWatcher.finishTask",
+        "title": "%cmd.finishTask%",
+        "category": "Copilot Contingent"
+      },
+      {
         "command": "contingentWatcher.btw",
         "title": "%cmd.btw%",
         "category": "Copilot Contingent"
@@ -428,6 +438,17 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "%cfg.activity%"
+        },
+        "contingentWatcher.activity.ticketPattern": {
+          "type": "string",
+          "default": "\\bAB#\\d+\\b|\\b(?!(?:UTF|SHA|ISO|RFC|CVE|HTTP)-)[A-Z][A-Z0-9]+-\\d+\\b|(?<![\\w#&])#\\d+\\b",
+          "markdownDescription": "%cfg.activityTicketPattern%"
+        },
+        "contingentWatcher.activity.ticketUrl": {
+          "type": "string",
+          "default": "",
+          "pattern": "^(https?://\\S*)?$",
+          "markdownDescription": "%cfg.activityTicketUrl%"
         },
         "contingentWatcher.unit": {
           "type": "string",
