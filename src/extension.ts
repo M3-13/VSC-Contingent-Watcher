@@ -21,6 +21,7 @@ import { CopilotOptions } from './copilotOptions';
 import { BillingService } from './billingService';
 import { resolveColor } from './core/appearance';
 import { expectedSurplus } from './core/surplus';
+import { BtwWindow, openBtwWindow } from './btw/btwWindow';
 
 const BILLING_URL = 'https://github.com/settings/billing';
 const COPILOT_SETTINGS_URL = 'https://github.com/settings/copilot';
@@ -524,15 +525,16 @@ export function activate(context: vscode.ExtensionContext): void {
   const log = vscode.window.createOutputChannel('Copilot Contingent', { log: true });
   const ctl = new Controller(context, state, log);
   const openDashboard = () => vscode.commands.executeCommand(`${DashboardViewProvider.viewId}.focus`);
+  const btwWindow = new BtwWindow(context, log);
 
   context.subscriptions.push(
     ctl,
     log,
     vscode.window.registerWebviewViewProvider(DashboardViewProvider.viewId, ctl.dashboard),
-    // btw = the /btw prompt file (prompts/btw.prompt.md): put "/btw " into the current chat input.
-    vscode.commands.registerCommand('contingentWatcher.btw', () =>
-      vscode.commands.executeCommand('workbench.action.chat.open', { query: '/btw ', isPartialQuery: true }),
-    ),
+    // btw: a side question about the current chat session in its own small window
+    // (the /btw prompt file, prompts/btw.prompt.md, is the in-chat alternative).
+    btwWindow,
+    vscode.commands.registerCommand('contingentWatcher.btw', () => openBtwWindow(btwWindow)),
     vscode.commands.registerCommand('contingentWatcher.configureBillingToken', () => ctl.onDashboardCommand('configureBillingToken')),
     vscode.commands.registerCommand('contingentWatcher.showLog', () => log.show()),
     vscode.commands.registerCommand('contingentWatcher.refresh', () => ctl.manualRefresh()),

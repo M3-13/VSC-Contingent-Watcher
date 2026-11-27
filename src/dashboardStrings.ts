@@ -36,9 +36,11 @@ export function dashboardStrings(): Record<string, string> {
 
     // btw
     askBtw: vscode.l10n.t('Ask btw'),
-    btwStrip: vscode.l10n.t('Type /btw in Copilot Chat while the agent works'),
-    btwTitle: vscode.l10n.t('Side questions with /btw'),
-    btwText: vscode.l10n.t('Type {0} in Copilot Chat while the agent works. It answers inline in your session, then the agent continues.'),
+    btwStrip: vscode.l10n.t('Side question about your session, the agent keeps working'),
+    btwTitle: vscode.l10n.t('Side questions with btw'),
+    btwText: vscode.l10n.t(
+      "Press {0} for a small window beside the editor: ask one quick question about the current session. It knows the chat, the agent's changes and your editor, answers right away and adds nothing to the chat. Or type /btw in the chat.",
+    ),
 
     // History: activity
     activity: vscode.l10n.t('Activity'),

@@ -405,9 +405,43 @@ test('commands: every manifest command is registered and runs; no askSparsam', a
   const openSettings = b.env.executed.find((e) => e.id === 'workbench.action.openSettings');
   assert.deepEqual(openSettings?.args, ['@ext:m3-13.copilot-contingent-watcher']);
   assert.ok(b.env.logs.includes('[show]'), 'showLog');
-  // btw puts "/btw " into the current chat input (the prompt file does the rest).
-  assert.deepEqual(b.env.executed.find((e) => e.id === 'workbench.action.chat.open')?.args, [{ query: '/btw ', isPartialQuery: true }]);
-  assert.equal(b.env.webviewPanels.length, 0, 'btw opens no extra window');
+  // btw opens its window beside the editor; it never opens or switches a chat session.
+  assert.equal(b.env.webviewPanels.length, 1, 'btw window');
+  assert.equal(b.env.webviewPanels[0].viewType, 'contingentWatcher.btw');
+  assert.equal(b.env.webviewPanels[0].showOptions.viewColumn, -2);
+  assert.match(b.env.webviewPanels[0].webview.html, /btw\.js/);
+  assert.ok(!b.env.executed.some((e) => /chat\.(open|new)/i.test(e.id)), 'no chat session opened');
+});
+
+test('btw window: init, ask (answered or explained, never stuck), copy, close returns to the chat', async (t) => {
+  const b = await boot(t);
+  await b.env.commands.get('contingentWatcher.btw')!();
+  const panel = b.env.webviewPanels[0];
+  panel.webview.send({ type: 'ready' });
+  await tick();
+  const init = panel.webview.posted.find((m: any) => m.type === 'init');
+  assert.ok(init, 'init posted');
+  assert.equal(init.strings.send, 'Send');
+  assert.deepEqual(init.focus, { prefill: undefined });
+  panel.webview.send({ type: 'ask', question: 'what did the agent change?' });
+  for (let i = 0; i < 30; i++) {
+    await tick();
+  }
+  const cards = panel.webview.posted.filter((m: any) => m.type === 'card').map((m: any) => m.card);
+  assert.ok(cards.length >= 1);
+  assert.equal(cards[0].question, 'what did the agent change?');
+  // No models in the fake → finished with an explanation, not stuck in "thinking".
+  assert.equal(cards.at(-1).status, 'error');
+  panel.webview.send({ type: 'copy', text: 'x' });
+  await tick();
+  let closed = false;
+  panel.onDidDispose(() => (closed = true));
+  panel.webview.send({ type: 'close' });
+  for (let i = 0; i < 5; i++) {
+    await tick();
+  }
+  assert.ok(closed, 'closed');
+  assert.ok(!b.env.executed.some((e) => /chat\.(open|new)/i.test(e.id)), 'no chat session opened');
 });
 
 test('btw: /btw prompt file is contributed and shipped', () => {
@@ -716,8 +750,7 @@ test('dashboard: every DashboardCommand is handled', async (t) => {
       assert.equal(m.current, undefined);
       assert.deepEqual([m.items[0].kind, m.items[0].title, m.items[0].details], ['manual', 'PROJ-7', ['PROJ-7 Review']]);
     },
-    btw: () =>
-      assert.ok(b.env.executed.some((e) => e.id === 'workbench.action.chat.open' && (e.args?.[0] as any)?.query === '/btw ')),
+    btw: () => assert.ok(b.env.webviewPanels.some((p: any) => p.viewType === 'contingentWatcher.btw')),
     snoozeCompletions: () => undefined,
   };
   for (const c of commands) {

@@ -464,6 +464,11 @@
           ],
           "default": "auto",
           "markdownDescription": "%cfg.unit%"
+        },
+        "contingentWatcher.btw.includeChat": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "%cfg.btwIncludeChat%"
         }
       }
     },

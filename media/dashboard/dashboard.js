@@ -709,11 +709,12 @@
     return t(id, '\u0000').replace('\u0000', `<code>${esc(code)}</code>`);
   }
 
-  /** Tips tab: what /btw is. */
+  /** Tips tab: what btw is (shortcut window first, /btw in the chat second). */
   function btwCard() {
+    const keys = /Mac/i.test(navigator.platform || '') ? '⌥⇧⌘B' : 'Ctrl+Alt+Shift+B';
     return `<section class="card btw-card" aria-labelledby="btw-title">
       <div class="card-head"><h2 id="btw-title">${icon.aside}${t('btwTitle')}</h2></div>
-      <p class="btw-text">${withCode('btwText', '/btw')}</p>
+      <p class="btw-text">${withCode('btwText', keys)}</p>
       <button class="btn primary" data-cmd="btw" data-k="btw-ask">${icon.aside}${t('askBtw')}</button></section>`;
   }
 

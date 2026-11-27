@@ -10,7 +10,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
   - **Verlauf:** woran du gearbeitet hast und wie lange (aktive Zeit und Verbrauch; ein Arbeitspaket endet mit deinem Commit – auch auf main/master – oder mit *Aufgabe abschließen*; Commits zum selben Ticket werden zusammengefasst), Monatsrückblick, Verbrauch pro Modell
   - **Tipps:** Spartipps passend zur aktuellen Lage
   - **Einstellungen:** Anzeige, Warnungen, Budget, Akzentfarbe, Statusleisten-Icon und -Farbe, Copilot-Schalter
-- **`/btw` – Nebenfrage wie in Claude Code:** Tippe im Copilot-Chat `/btw deine Frage`, auch während der Agent arbeitet. Ab VS Code 1.110 lenkt das den laufenden Agenten kurz um („Steering“): Er beantwortet die Frage knapp im selben Chat mit dem Kontext und Modell der Session und arbeitet danach weiter. `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` setzt `/btw ` in die Chat-Eingabe.
+- **btw – Nebenfrage wie in Claude Code:** `Strg+Alt+Umschalt+B` / `Cmd+Alt+Shift+B` öffnet ein schmales btw-Fenster neben dem Editor, auch während der Agent arbeitet. Eine Frage, eine Antwort, sofort. btw kennt den Kontext deiner laufenden Chat-Sitzung (aus dem lokalen Chat-Speicher von VS Code: letzte Runden inklusive dem, was der Agent getan hat), die nicht committeten Git-Änderungen, die zuletzt bearbeiteten Dateien und deinen Editor. Es antwortet mit dem Modell der Sitzung. Im Chat landet nichts, keine neue Sitzung, und `Esc` bringt dich zurück in den Chat. Alternativ im Chat selbst: `/btw deine Frage` (ab VS Code 1.110 beantwortet der Agent sie kurz und arbeitet danach weiter).
 - **Credits statt Requests:** Meldet GitHub AI-Credits (nutzungsbasierte Abrechnung), zeigt die Extension Credits an. Das ist einstellbar über `contingentWatcher.unit`.
 - **Bedarf (geschätzt):** wie viel dein Monat bei deinem Tempo gebraucht hätte, auch wenn das Kontingent schon leer ist, und wie viel pro Tag gereicht hätte.
 - **Hinweis gegen Verfall:** In der letzten Monatswoche meldet die Extension, wenn ein Teil des Kontingents voraussichtlich ungenutzt verfällt.
@@ -49,6 +49,7 @@ VS-Code-Erweiterung, die dein GitHub-Copilot-Kontingent (Premium-Anfragen oder A
 | `contingentWatcher.activity.ticketPattern` | Jira, `#123`, `AB#123` | Regex für Ticket-IDs in Commit-Nachricht und Branch-Name. |
 | `contingentWatcher.activity.ticketUrl` | leer | Link-Vorlage, z. B. `https://jira.example.com/browse/{id}`. |
 | `contingentWatcher.unit` | `auto` | Anzeige: `auto` (Credits, wenn vorhanden), `credits` oder `requests`. |
+| `contingentWatcher.btw.includeChat` | `true` | btw darf die aktuelle Chat-Sitzung lesen (lokaler Chat-Speicher von VS Code). |
 
 ## Befehle
 

@@ -56,6 +56,7 @@ test('manifest: commands in package.json and registerCommand() match; executed o
     'contingentWatcher.dashboard',
     'contingentWatcher.billingToken',
     'contingentWatcher.gettingStarted',
+    'contingentWatcher.btw.chosenModel', // globalState key
   ]);
   assert.deepEqual([...refs].filter((r) => !known.has(r)), [], 'unknown contingentWatcher.* ids referenced');
   assert.ok(!/askSparsam/i.test(ALL_SRC + JSON.stringify(PKG)), 'askSparsam removed');
